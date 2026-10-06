@@ -1,5 +1,6 @@
 using DocumentProcessing.Api.Services;
 
+
 //Builder helps configure the app and services
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,7 @@ builder.Services.AddControllers();
 
 //Create one instance for each HTTP request and inject it into the controller
 builder.Services.AddScoped<DocumentsService>();
-
+builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
 //Build the app
 var app = builder.Build();
 
