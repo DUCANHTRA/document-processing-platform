@@ -1,3 +1,5 @@
+using DocumentProcessing.Api.Services;
+
 //Builder helps configure the app and services
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +8,9 @@ var builder = WebApplication.CreateBuilder(args);
 //Register services for OpenAPI
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+
+//Create one instance for each HTTP request and inject it into the controller
+builder.Services.AddScoped<DocumentsService>();
 
 //Build the app
 var app = builder.Build();
