@@ -1,0 +1,35 @@
+## .NET build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+
+## Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## .NET tooling and generated files
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.log
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+## NuGet
+*.nupkg
+*.snupkg
+.nuget/
+
+## IDE/editor files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+
+## OS files
+.DS_Store
+Thumbs.db
