@@ -1,5 +1,6 @@
 using DocumentProcessing.Api.Services;
-
+using DocumentProcessing.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 //Builder helps configure the app and services
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,12 @@ builder.Services.AddControllers();
 //Create one instance for each HTTP request and inject it into the controller
 builder.Services.AddScoped<DocumentsService>();
 builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString)
+);
+
 //Build the app
 var app = builder.Build();
 
