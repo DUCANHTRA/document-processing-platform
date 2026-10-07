@@ -10,4 +10,5 @@ public class Document
 
     public string StoragePath { get; set;} = "";
     public DateTime CreatedAt { get; set; }
+    public ProcessingJob? ProcessingJob { get; set; }
 }

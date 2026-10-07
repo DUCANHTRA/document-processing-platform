@@ -52,6 +52,55 @@ namespace DocumentProcessing.Api.Migrations
 
                     b.ToTable("Documents");
                 });
+
+            modelBuilder.Entity("DocumentProcessing.Api.Models.ProcessingJob", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId")
+                        .IsUnique();
+
+                    b.ToTable("ProcessingJobs");
+                });
+
+            modelBuilder.Entity("DocumentProcessing.Api.Models.ProcessingJob", b =>
+                {
+                    b.HasOne("DocumentProcessing.Api.Models.Document", null)
+                        .WithOne("ProcessingJob")
+                        .HasForeignKey("DocumentProcessing.Api.Models.ProcessingJob", "DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("DocumentProcessing.Api.Models.Document", b =>
+                {
+                    b.Navigation("ProcessingJob");
+                });
 #pragma warning restore 612, 618
         }
     }

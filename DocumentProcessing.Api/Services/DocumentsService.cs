@@ -53,6 +53,24 @@ public class DocumentsService
 
         _context.Documents.Add(document);
         await _context.SaveChangesAsync();
+
+        /*
+        Create a new ProcessingJob for the uploaded document and 
+        save it to the database. 
+        The job is initialized with a "Pending" status 
+        and the current UTC time as the CreatedAt timestamp. 
+        The job is then added to the ProcessingJobs DbSet and saved to the database.
+        */
+        var job = new ProcessingJob
+        {
+            DocumentId = document.Id,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.ProcessingJobs.Add(job);
+        await _context.SaveChangesAsync();
+
         return document;
     }
 }
