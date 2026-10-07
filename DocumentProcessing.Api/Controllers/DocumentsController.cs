@@ -18,9 +18,9 @@ public class DocumentsController : ControllerBase
         _documentService = documentService;
     }
     [HttpGet]
-    public IActionResult Documents()//IActionResult return HTTP response
+    public async Task<IActionResult> Documents()//IActionResult return HTTP response
     {
-        var documents = _documentService.GetDocuments();
+        var documents = await _documentService.GetDocuments();
         return Ok(documents);
     }
 }
