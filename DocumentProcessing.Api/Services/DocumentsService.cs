@@ -1,5 +1,8 @@
 using DocumentProcessing.Api.Data;
+using DocumentProcessing.Api.DTOs;
+using DocumentProcessing.Api.Models;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace DocumentProcessing.Api.Services;
 
@@ -24,5 +27,27 @@ public class DocumentsService
                 fileName = document.FileName,
             })
             .ToArrayAsync(); //execute the query and return the results as an array async
+    }
+
+    public async Task<Document?> GetDocument(int id)
+    {
+        return await _context.Documents
+            .FirstOrDefaultAsync(document => document.Id == id);
+    }
+
+    public async Task<Document> CreateDocument(
+        CreateDocumentDto dto)
+    {
+        var document = new Document
+        {
+            FileName = dto.FileName,
+            ContentType = dto.ContentType,
+            FileSize = dto.FileSize,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Documents.Add(document);
+        await _context.SaveChangesAsync();
+        return document;
     }
 }
