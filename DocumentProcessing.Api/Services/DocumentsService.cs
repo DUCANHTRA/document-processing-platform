@@ -2,6 +2,7 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.DTOs;
 using DocumentProcessing.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 
 namespace DocumentProcessing.Api.Services;
@@ -35,14 +36,18 @@ public class DocumentsService
             .FirstOrDefaultAsync(document => document.Id == id);
     }
 
-    public async Task<Document> CreateDocument(
-        CreateDocumentDto dto)
+    public async Task<Document> CreateDocument(IFormFile file)
     {
+        var storagePath = await _fileStorage.SaveAsync(
+            file.OpenReadStream(),
+            file.FileName
+        );
         var document = new Document
         {
-            FileName = dto.FileName,
-            ContentType = dto.ContentType,
-            FileSize = dto.FileSize,
+            FileName = file.FileName,
+            ContentType = file.ContentType,
+            FileSize = file.Length,
+            StoragePath = storagePath,
             CreatedAt = DateTime.UtcNow
         };
 

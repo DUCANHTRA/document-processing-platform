@@ -39,12 +39,11 @@ public class DocumentsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateDocument(
-        CreateDocumentDto dto)
+    public async Task<IActionResult> CreateDocument(IFormFile file)
     {
         // Pass the validated request data to the service and wait for the new document to be saved.
-        var document = await _documentService.CreateDocument(dto);
-
+        var document = await _documentService.CreateDocument(file);
+    
         // Return HTTP 201 Created, include the new document in the response body,
         // and set the Location header to the URL for retrieving it with GetDocument.
         return CreatedAtAction(
