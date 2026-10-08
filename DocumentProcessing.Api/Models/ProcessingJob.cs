@@ -15,4 +15,7 @@ public class ProcessingJob
     public DateTime? CompletedAt { get; set; }
 
     public string? ErrorMessage { get; set; }
+    public int RetryCount { get; set; } = 0;
+
+    public int MaxRetries { get; set; } = 3;
 }

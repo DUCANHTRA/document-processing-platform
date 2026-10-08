@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Services;
@@ -88,8 +89,27 @@ public class DocumentProcessingWorker : BackgroundService
                 }
                 catch (Exception ex)
                 {
-                    job.Status = "Failed";
+                    job.RetryCount++;
                     job.ErrorMessage = ex.Message;
+
+                    if (job.RetryCount < job.MaxRetries)
+                    {
+                        job.Status = "Pending";
+
+                        Console.WriteLine(
+                            $"Job {job.Id} failed" +
+                            $"Retry {job.RetryCount} of {job.MaxRetries}"
+                        );
+                    }
+                    else
+                    {
+                        job.Status = "Failed";
+
+                        Console.WriteLine(
+                            $"Job {job.Id} permanently failed after " +
+                            $"{job.RetryCount} attempts: {ex.Message}"
+                        );
+                    }
 
                     await context.SaveChangesAsync();
 
