@@ -1,4 +1,5 @@
 using DocumentProcessing.Api.Data;
+using DocumentProcessing.Api.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -27,9 +28,13 @@ public class DocumentProcessingWorker : BackgroundService
                 scope.ServiceProvider
                     .GetRequiredService<AppDbContext>();
 
+            var fileProcessor =
+                scope.ServiceProvider
+                    .GetRequiredService<IFileProcessor>();
+
             var job = await context.ProcessingJobs
                 .FirstOrDefaultAsync(
-                    job => job.Status == "Processing",
+                    job => job.Status == "Pending",
                     stoppingToken);
 
             if (job is not null)
@@ -45,10 +50,20 @@ public class DocumentProcessingWorker : BackgroundService
                         $"Started processing job {job.Id}");
 
                     // Simulate processing
-                    await Task.Delay(
-                        TimeSpan.FromSeconds(3),
-                        stoppingToken);
+                    var document = await context.Documents
+                        .FirstAsync(
+                            document => document.Id == job.DocumentId,
+                            stoppingToken);
 
+                    var text = await fileProcessor.ProcessAsync(
+                        document.StoragePath,
+                        stoppingToken
+                    );
+
+                    Console.WriteLine($"Extracted text from {document.FileName}:");
+                    Console.WriteLine(text);
+
+                    //Update job status Completed
                     job.Status = "Completed";
                     job.CompletedAt = DateTime.UtcNow;
 

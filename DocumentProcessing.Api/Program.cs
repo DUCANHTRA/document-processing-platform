@@ -30,6 +30,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // We register the background worker here.
 // ASP.NET Core will start it when the application starts.
 builder.Services.AddHostedService<DocumentProcessingWorker>();
+builder.Services.AddScoped<IFileProcessor, PdfFileProcessor>();
 
 // Build the app after all services are registered.
 var app = builder.Build();
