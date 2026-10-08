@@ -13,8 +13,12 @@ public class DocumentProcessingWorker : BackgroundService
     // This is how the worker creates a new database scope.
     // A normal controller can use a scoped DbContext automatically,
     // but a background service does not have an HTTP request to create one.
+
+    // Field to hole factory object
     private readonly IServiceScopeFactory _scopeFactory;
 
+    // Constructor
+    // Give factory for worker to use later
     public DocumentProcessingWorker(
         IServiceScopeFactory scopeFactory)
     {
@@ -37,7 +41,8 @@ public class DocumentProcessingWorker : BackgroundService
                 scope.ServiceProvider
                     .GetRequiredService<AppDbContext>();
 
-            // Look for a job that is waiting to be processed.
+            // Look for a job that is waiting to be processed
+            // from ProcessingJobs table in the database.
             // If we find one, we can work on it later.
             var job = await context.ProcessingJobs
                 .FirstOrDefaultAsync(
