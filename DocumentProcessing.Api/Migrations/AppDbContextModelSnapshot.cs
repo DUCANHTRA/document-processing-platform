@@ -88,6 +88,29 @@ namespace DocumentProcessing.Api.Migrations
                     b.ToTable("ProcessingJobs");
                 });
 
+            modelBuilder.Entity("DocumentProcessing.Api.Models.ProcessingResult", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExtractedText")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProcessingResults");
+                });
+
             modelBuilder.Entity("DocumentProcessing.Api.Models.ProcessingJob", b =>
                 {
                     b.HasOne("DocumentProcessing.Api.Models.Document", null)

@@ -1,8 +1,7 @@
 using DocumentProcessing.Api.Data;
+using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 
 namespace DocumentProcessing.Api.Workers;
 
@@ -60,8 +59,18 @@ public class DocumentProcessingWorker : BackgroundService
                         stoppingToken
                     );
 
+                    // Save extracted text to ProcessingResult table
                     Console.WriteLine($"Extracted text from {document.FileName}:");
-                    Console.WriteLine(text);
+
+                    var result = new ProcessingResult
+                    {
+                        DocumentId = document.Id,
+                        ExtractedText = text,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    context.ProcessingResults.Add(result);
+                    await context.SaveChangesAsync();
 
                     //Update job status Completed
                     job.Status = "Completed";
