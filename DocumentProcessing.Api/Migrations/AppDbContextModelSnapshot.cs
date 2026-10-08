@@ -76,6 +76,9 @@ namespace DocumentProcessing.Api.Migrations
                     b.Property<int>("MaxRetries")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("NextRetryAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("RetryCount")
                         .HasColumnType("integer");
 

@@ -32,9 +32,13 @@ public class DocumentProcessingWorker : BackgroundService
                 scope.ServiceProvider
                     .GetRequiredService<IFileProcessor>();
 
+            var now = DateTime.UtcNow;
+
             var job = await context.ProcessingJobs
                 .FirstOrDefaultAsync(
-                    job => job.Status == "Pending",
+                    job => job.Status == "Pending"
+                        && (job.NextRetryAt == null 
+                            || job.NextRetryAt <= now),
                     stoppingToken);
 
             if (job is not null)
@@ -96,9 +100,14 @@ public class DocumentProcessingWorker : BackgroundService
                     {
                         job.Status = "Pending";
 
+                        var delaySecond = 5 * Math.Pow(2, job.RetryCount - 1);
+
+                        job.NextRetryAt = DateTime.UtcNow.AddSeconds(delaySecond);
+
                         Console.WriteLine(
                             $"Job {job.Id} failed" +
-                            $"Retry {job.RetryCount} of {job.MaxRetries}"
+                            $"Retry {job.RetryCount} of {job.MaxRetries}" +
+                            $"Job {job.Id} will retry at {job.NextRetryAt}."
                         );
                     }
                     else

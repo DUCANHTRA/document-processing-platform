@@ -18,4 +18,5 @@ public class ProcessingJob
     public int RetryCount { get; set; } = 0;
 
     public int MaxRetries { get; set; } = 3;
+    public DateTime? NextRetryAt { get; set; }
 }
