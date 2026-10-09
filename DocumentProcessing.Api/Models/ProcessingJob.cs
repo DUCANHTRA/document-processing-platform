@@ -19,4 +19,6 @@ public class ProcessingJob
 
     public int MaxRetryCount { get; set; } = 3;
     public DateTime? NextRetryAt { get; set; }
+    public DateTime? LeaseExpiresAt { get; set; }
+    public Guid? LeaseToken { get; set; }
 }

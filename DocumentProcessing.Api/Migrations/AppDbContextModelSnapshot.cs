@@ -73,6 +73,12 @@ namespace DocumentProcessing.Api.Migrations
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("LeaseExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("MaxRetryCount")
                         .HasColumnType("integer");
 

@@ -1,5 +1,6 @@
 using System.Net.Mail;
 using System.Security.Claims;
+using System.Threading.Tasks.Dataflow;
 using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Services;
@@ -11,10 +12,55 @@ public class DocumentProcessingWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
 
+    private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(5);
+
     public DocumentProcessingWorker(
         IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
+    }
+
+    private async Task RecoverExpiredJobAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken
+    )
+    {
+        var now = DateTime.UtcNow;
+        var requeued = await context.ProcessingJobs
+            .Where(job =>
+                job.Status == "Processing" &&
+                job.LeaseExpiresAt != null &&
+                job.LeaseExpiresAt < now &&
+                job.RetryCount < job.MaxRetryCount
+            )
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(job => job.Status, "Pending")
+                .SetProperty(job => job.RetryCount, job => job.RetryCount + 1)
+                .SetProperty(job => job.ErrorMessage, "Worker lease expired")
+                .SetProperty(job => job.NextRetryAt, now)
+                .SetProperty(job => job.LeaseToken, (Guid?)null)
+                .SetProperty(job => job.LeaseExpiresAt, (DateTime?)null),
+                cancellationToken);
+        
+        var failed = await context.ProcessingJobs
+            .Where(job =>
+                job.Status == "Processing" &&
+                job.LeaseExpiresAt != null &&
+                job.LeaseExpiresAt < now &&
+                job.RetryCount >= job.MaxRetryCount)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(job => job.Status, "Failed")
+                .SetProperty(job => job.ErrorMessage, "Worker lease expired")
+                .SetProperty(job => job.NextRetryAt, (DateTime?)null)
+                .SetProperty(job => job.LeaseToken, (Guid?)null)
+                .SetProperty(job => job.LeaseExpiresAt, (DateTime?)null),
+                cancellationToken);
+
+        if (requeued > 0 || failed > 0)
+            {
+                Console.WriteLine(
+                    $"Recovered expired jobs. Requeued: {requeued}, failed: {failed}");
+            }
     }
 
     /*
@@ -68,8 +114,12 @@ public class DocumentProcessingWorker : BackgroundService
             return null;
         }
 
+        var claimedAt = DateTime.UtcNow;
+
         job.Status = "Processing";
-        job.StartedAt = DateTime.UtcNow;
+        job.StartedAt = claimedAt;
+        job.LeaseToken = Guid.NewGuid();
+        job.LeaseExpiresAt = claimedAt.Add(LeaseDuration);
 
         await context.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -93,15 +143,19 @@ public class DocumentProcessingWorker : BackgroundService
                 scope.ServiceProvider
                     .GetRequiredService<IFileProcessor>();
 
-            var now = DateTime.UtcNow;
+            //Recover expired jobs
+            await RecoverExpiredJobAsync(context, stoppingToken);
 
+            //Claim Pending Job
             var job = await ClaimNextJobAsync(
                 context,
                 stoppingToken);
 
+            //Processing Job
             if (job is not null)
             {
                 var jobId = job.Id;
+                var leaseToken = job.LeaseToken!.Value;
 
                 try
                 {
@@ -145,68 +199,103 @@ public class DocumentProcessingWorker : BackgroundService
 
                     }
 
-                    //Update job status Completed
-                    job.Status = "Completed";
-                    job.CompletedAt = DateTime.UtcNow;
-                    job.NextRetryAt = null;
-                    job.ErrorMessage = null;
+
+                    //Update with lease token
+                    await using var completeTx = await context.Database.BeginTransactionAsync(stoppingToken);
 
                     await context.SaveChangesAsync(stoppingToken);
 
-                    Console.WriteLine(
-                        $"Completed job {job.Id}");
+                    var completedAt = DateTime.UtcNow;
+
+                    var updated = await context.ProcessingJobs
+                        .Where(j => j.Id == jobId && j.LeaseToken == leaseToken)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(j => j.Status, "Completed")
+                            .SetProperty(j => j.CompletedAt, completedAt)
+                            .SetProperty(j => j.NextRetryAt, (DateTime?)null)
+                            .SetProperty(j => j.ErrorMessage, (string?)null)
+                            .SetProperty(j => j.LeaseToken, (Guid?)null)
+                            .SetProperty(j => j.LeaseExpiresAt, (DateTime?)null),
+                            stoppingToken);
+
+                    // Lease expires
+                    if (updated == 0)
+                    {
+                        await completeTx.RollbackAsync(stoppingToken);
+
+                        Console.WriteLine(
+                            $"Job {jobId} lost its lease. Result discarded.");
+                    }
+                    else
+                    {
+                        await completeTx.CommitAsync(stoppingToken);
+
+                        Console.WriteLine($"Completed job {jobId}");
+                    }
                 }
+                // Catch error 1
                 catch (OperationCanceledException)
                     when (stoppingToken.IsCancellationRequested)
                 {
                     // Application is shutting down.
                 }
+                // Catch error 2
                 catch (Exception ex)
                 {
                     context.ChangeTracker.Clear();
-
-                    job = await context.ProcessingJobs
-                        .FirstAsync(
-                            j => job.Id == jobId,
+                    var failedJob = await context.ProcessingJobs
+                        .FirstOrDefaultAsync(
+                            j => j.Id == jobId && j.LeaseToken == leaseToken,
                             stoppingToken);
-
-                    job.RetryCount++;
-                    job.ErrorMessage = ex.Message;
-
-                    if (job.RetryCount <= job.MaxRetryCount)
+                    if (failedJob is null)
                     {
-                        job.Status = "Pending";
-
-                        var delaySecond =
-                            5 * Math.Pow(2, job.RetryCount - 1);
-
-                        job.NextRetryAt = 
-                            DateTime.UtcNow.AddSeconds(delaySecond);
-
                         Console.WriteLine(
-                            $"Job {job.Id} failed " +
-                            $"Retry {job.RetryCount} of {job.MaxRetryCount} " +
-                            $"Job {job.Id} will retry at {job.NextRetryAt}."
-                        );
+                            $"Job {jobId} failed but lost its lease. Ignoring.");
                     }
+
                     else
                     {
-                        job.Status = "Failed";
-                        job.NextRetryAt = null;
+                        failedJob.RetryCount++;
+                        failedJob.ErrorMessage = ex.Message;
+
+                        if (failedJob.RetryCount <= failedJob.MaxRetryCount)
+                        {
+                            failedJob.Status = "Pending";
+
+                            var delaySecond =
+                                5 * Math.Pow(2, failedJob.RetryCount - 1);
+
+                            failedJob.NextRetryAt =
+                                DateTime.UtcNow.AddSeconds(delaySecond);
+
+                            Console.WriteLine(
+                                $"Job {failedJob.Id} failed " +
+                                $"Retry {failedJob.RetryCount} of {failedJob.MaxRetryCount} " +
+                                $"Job {failedJob.Id} will retry at {failedJob.NextRetryAt}."
+                            );
+                        }
+                        else
+                        {
+                            failedJob.Status = "Failed";
+                            failedJob.NextRetryAt = null;
+
+                            Console.WriteLine(
+                                $"Job {failedJob.Id} permanently failed after " +
+                                $"{failedJob.RetryCount} attempts: {ex.Message}"
+                            );
+                        }
+
+                        failedJob.LeaseToken = null;
+                        failedJob.LeaseExpiresAt = null;
+
+                        await context.SaveChangesAsync(stoppingToken);
 
                         Console.WriteLine(
-                            $"Job {job.Id} permanently failed after " +
-                            $"{job.RetryCount} attempts: {ex.Message}"
-                        );
+                            $"Failed job {failedJob.Id}: {ex.Message}");
                     }
-
-                    await context.SaveChangesAsync();
-
-                    Console.WriteLine(
-                        $"Failed job {job.Id}: {ex.Message}");
                 }
-            }
 
+            }
             await Task.Delay(
                 TimeSpan.FromSeconds(5),
                 stoppingToken);
