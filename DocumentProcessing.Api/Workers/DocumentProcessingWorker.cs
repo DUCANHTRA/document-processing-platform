@@ -101,6 +101,8 @@ public class DocumentProcessingWorker : BackgroundService
 
             if (job is not null)
             {
+                var jobId = job.Id;
+
                 try
                 {
                     Console.WriteLine(
@@ -142,13 +144,14 @@ public class DocumentProcessingWorker : BackgroundService
                         result.ExtractedText = text;
 
                     }
-                    await context.SaveChangesAsync(stoppingToken);
 
                     //Update job status Completed
                     job.Status = "Completed";
                     job.CompletedAt = DateTime.UtcNow;
+                    job.NextRetryAt = null;
+                    job.ErrorMessage = null;
 
-                    await context.SaveChangesAsync();
+                    await context.SaveChangesAsync(stoppingToken);
 
                     Console.WriteLine(
                         $"Completed job {job.Id}");
@@ -160,6 +163,13 @@ public class DocumentProcessingWorker : BackgroundService
                 }
                 catch (Exception ex)
                 {
+                    context.ChangeTracker.Clear();
+
+                    job = await context.ProcessingJobs
+                        .FirstAsync(
+                            j => job.Id == jobId,
+                            stoppingToken);
+
                     job.RetryCount++;
                     job.ErrorMessage = ex.Message;
 
