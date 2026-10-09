@@ -120,15 +120,29 @@ public class DocumentProcessingWorker : BackgroundService
                     // Save extracted text to ProcessingResult table
                     Console.WriteLine($"Extracted text from {document.FileName}:");
 
-                    var result = new ProcessingResult
-                    {
-                        DocumentId = document.Id,
-                        ExtractedText = text,
-                        CreatedAt = DateTime.UtcNow
-                    };
+                    var result = await context.ProcessingResults
+                        .FirstOrDefaultAsync(
+                            //compare Document Id from ProcessingResult and ProcessingJob
+                            result => result.DocumentId == document.Id,
+                            stoppingToken);
 
-                    context.ProcessingResults.Add(result);
-                    await context.SaveChangesAsync();
+                    if (result is null)
+                    {
+                        result = new ProcessingResult
+                        {
+                            DocumentId = document.Id,
+                            ExtractedText = text,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        context.ProcessingResults.Add(result);
+                    }
+                    else
+                    {
+                        result.ExtractedText = text;
+
+                    }
+                    await context.SaveChangesAsync(stoppingToken);
 
                     //Update job status Completed
                     job.Status = "Completed";

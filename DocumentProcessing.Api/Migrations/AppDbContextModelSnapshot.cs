@@ -117,6 +117,9 @@ namespace DocumentProcessing.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("DocumentId")
+                        .IsUnique();
+
                     b.ToTable("ProcessingResults");
                 });
 
