@@ -17,6 +17,24 @@ public class DocumentProcessingWorker : BackgroundService
         _scopeFactory = scopeFactory;
     }
 
+    /*
+     * This method safely claims one pending job.
+     *
+     * Why do we need this?
+     * If two workers run at the same time, both may read the same job as "Pending"
+     * before either one updates it to "Processing". That creates a race condition.
+     *
+     * To prevent this, we use a database transaction with:
+     * - FOR UPDATE SKIP LOCKED
+     * - select one eligible job
+     * - lock that row so another worker cannot claim it at the same time
+     * - mark it as "Processing"
+     * - commit the transaction
+     *
+     * Important: we do not keep the transaction open while processing the PDF.
+     * We only lock the row long enough to claim the job, then we release the lock.
+     * This keeps the system safe without blocking other workers for too long.
+     */
     private async Task<ProcessingJob?> ClaimNextJobAsync(
         AppDbContext context,
         CancellationToken cancellationToken)
@@ -83,11 +101,6 @@ public class DocumentProcessingWorker : BackgroundService
 
             if (job is not null)
             {
-                job.Status = "Processing";
-                job.StartedAt = DateTime.UtcNow;
-
-                await context.SaveChangesAsync();
-
                 try
                 {
                     Console.WriteLine(
