@@ -200,7 +200,7 @@ public class DocumentProcessingWorker : BackgroundService
                     }
 
 
-                    //Update with lease token
+                    //Update with lease token check
                     await using var completeTx = await context.Database.BeginTransactionAsync(stoppingToken);
 
                     await context.SaveChangesAsync(stoppingToken);
@@ -243,16 +243,21 @@ public class DocumentProcessingWorker : BackgroundService
                 catch (Exception ex)
                 {
                     context.ChangeTracker.Clear();
+
+                    // Check if current job still belongs to this worker
                     var failedJob = await context.ProcessingJobs
                         .FirstOrDefaultAsync(
                             j => j.Id == jobId && j.LeaseToken == leaseToken,
                             stoppingToken);
+                    
+                    // Failed and expired token
                     if (failedJob is null)
                     {
                         Console.WriteLine(
                             $"Job {jobId} failed but lost its lease. Ignoring.");
                     }
 
+                    // Failed and valid token
                     else
                     {
                         failedJob.RetryCount++;
