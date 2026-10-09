@@ -1,4 +1,5 @@
 using System.Net.Mail;
+using System.Security.Claims;
 using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Services;
@@ -14,6 +15,48 @@ public class DocumentProcessingWorker : BackgroundService
         IServiceScopeFactory scopeFactory)
     {
         _scopeFactory = scopeFactory;
+    }
+
+    private async Task<ProcessingJob?> ClaimNextJobAsync(
+        AppDbContext context,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction =
+            await context.Database.BeginTransactionAsync(
+                cancellationToken);
+
+        var now = DateTime.UtcNow;
+
+        var jobs = await context.ProcessingJobs
+            .FromSqlInterpolated($"""
+                SELECT *
+                FROM "ProcessingJobs"
+                WHERE "Status" = 'Pending'
+                AND (
+                    "NextRetryAt" IS NULL
+                    OR "NextRetryAt" <= {now}
+                )
+                ORDER BY "CreatedAt", "Id"
+                LIMIT 1
+                FOR UPDATE SKIP LOCKED
+                """)
+            .ToListAsync(cancellationToken);
+
+        var job = jobs.FirstOrDefault();
+
+        if (job is null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+            return null;
+        }
+
+        job.Status = "Processing";
+        job.StartedAt = DateTime.UtcNow;
+
+        await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return job;
     }
 
     protected override async Task ExecuteAsync(
@@ -34,12 +77,9 @@ public class DocumentProcessingWorker : BackgroundService
 
             var now = DateTime.UtcNow;
 
-            var job = await context.ProcessingJobs
-                .FirstOrDefaultAsync(
-                    job => job.Status == "Pending"
-                        && (job.NextRetryAt == null 
-                            || job.NextRetryAt <= now),
-                    stoppingToken);
+            var job = await ClaimNextJobAsync(
+                context,
+                stoppingToken);
 
             if (job is not null)
             {
@@ -96,23 +136,26 @@ public class DocumentProcessingWorker : BackgroundService
                     job.RetryCount++;
                     job.ErrorMessage = ex.Message;
 
-                    if (job.RetryCount < job.MaxRetries)
+                    if (job.RetryCount <= job.MaxRetryCount)
                     {
                         job.Status = "Pending";
 
-                        var delaySecond = 5 * Math.Pow(2, job.RetryCount - 1);
+                        var delaySecond =
+                            5 * Math.Pow(2, job.RetryCount - 1);
 
-                        job.NextRetryAt = DateTime.UtcNow.AddSeconds(delaySecond);
+                        job.NextRetryAt = 
+                            DateTime.UtcNow.AddSeconds(delaySecond);
 
                         Console.WriteLine(
-                            $"Job {job.Id} failed" +
-                            $"Retry {job.RetryCount} of {job.MaxRetries}" +
+                            $"Job {job.Id} failed " +
+                            $"Retry {job.RetryCount} of {job.MaxRetryCount} " +
                             $"Job {job.Id} will retry at {job.NextRetryAt}."
                         );
                     }
                     else
                     {
                         job.Status = "Failed";
+                        job.NextRetryAt = null;
 
                         Console.WriteLine(
                             $"Job {job.Id} permanently failed after " +

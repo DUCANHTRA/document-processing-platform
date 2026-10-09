@@ -17,6 +17,6 @@ public class ProcessingJob
     public string? ErrorMessage { get; set; }
     public int RetryCount { get; set; } = 0;
 
-    public int MaxRetries { get; set; } = 3;
+    public int MaxRetryCount { get; set; } = 3;
     public DateTime? NextRetryAt { get; set; }
 }

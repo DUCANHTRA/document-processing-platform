@@ -73,7 +73,7 @@ namespace DocumentProcessing.Api.Migrations
                     b.Property<string>("ErrorMessage")
                         .HasColumnType("text");
 
-                    b.Property<int>("MaxRetries")
+                    b.Property<int>("MaxRetryCount")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("NextRetryAt")
