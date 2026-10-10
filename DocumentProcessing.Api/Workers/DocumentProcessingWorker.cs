@@ -1,6 +1,3 @@
-using System.Net.Mail;
-using System.Security.Claims;
-using System.Threading.Tasks.Dataflow;
 using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Services;
@@ -239,7 +236,7 @@ public class DocumentProcessingWorker : BackgroundService
                 {
                     // Application is shutting down.
                 }
-                // Catch error 2
+                // Catch error if Job Failed or Token Expires
                 catch (Exception ex)
                 {
                     context.ChangeTracker.Clear();
@@ -260,43 +257,26 @@ public class DocumentProcessingWorker : BackgroundService
                     // Failed and valid token
                     else
                     {
-                        failedJob.RetryCount++;
-                        failedJob.ErrorMessage = ex.Message;
-
-                        if (failedJob.RetryCount <= failedJob.MaxRetryCount)
+                        JobFailureHandler.ApplyFailure(
+                            failedJob,
+                            ex.Message,
+                            DateTime.UtcNow);
+                        
+                        if (failedJob.Status == "Pending")
                         {
-                            failedJob.Status = "Pending";
-
-                            var delaySecond =
-                                5 * Math.Pow(2, failedJob.RetryCount - 1);
-
-                            failedJob.NextRetryAt =
-                                DateTime.UtcNow.AddSeconds(delaySecond);
-
                             Console.WriteLine(
-                                $"Job {failedJob.Id} failed " +
-                                $"Retry {failedJob.RetryCount} of {failedJob.MaxRetryCount} " +
-                                $"Job {failedJob.Id} will retry at {failedJob.NextRetryAt}."
-                            );
+                                $"Job {failedJob.Id} failed. " +
+                                $"Retry {failedJob.RetryCount} of {failedJob.MaxRetryCount}. " +
+                                $"Will retry at {failedJob.NextRetryAt}.");
                         }
                         else
                         {
-                            failedJob.Status = "Failed";
-                            failedJob.NextRetryAt = null;
-
                             Console.WriteLine(
                                 $"Job {failedJob.Id} permanently failed after " +
-                                $"{failedJob.RetryCount} attempts: {ex.Message}"
-                            );
+                                $"{failedJob.RetryCount} attempts: {ex.Message}");
                         }
 
-                        failedJob.LeaseToken = null;
-                        failedJob.LeaseExpiresAt = null;
-
                         await context.SaveChangesAsync(stoppingToken);
-
-                        Console.WriteLine(
-                            $"Failed job {failedJob.Id}: {ex.Message}");
                     }
                 }
 
