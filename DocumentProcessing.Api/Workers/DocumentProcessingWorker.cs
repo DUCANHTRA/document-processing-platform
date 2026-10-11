@@ -17,7 +17,7 @@ public class DocumentProcessingWorker : BackgroundService
         _scopeFactory = scopeFactory;
     }
 
-    private async Task RecoverExpiredJobAsync(
+    public static async Task RecoverExpiredJobAsync(
         AppDbContext context,
         CancellationToken cancellationToken
     )
