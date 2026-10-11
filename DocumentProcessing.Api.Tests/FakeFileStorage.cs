@@ -1,0 +1,18 @@
+using DocumentProcessing.Api.Services;
+
+namespace DocumentProcessing.Api.Tests;
+
+public class FakeFileStorage : IFileStorage
+{
+    public Task<string> SaveAsync(Stream file, string fileName)
+    {
+        return Task.FromResult($"fake-storage/{fileName}");
+
+        /*
+        LocalFileStorage:  "C:\...\uploads\invoice.pdf"   
+        (a file now exists on disk)
+        FakeFileStorage:   "fake-storage/invoice.pdf"      
+        (nothing exists)
+        */
+    }
+}

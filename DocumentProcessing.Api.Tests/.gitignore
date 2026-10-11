@@ -1,0 +1,14 @@
+# Build output
+bin/
+obj/
+
+# Test results and coverage
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Visual Studio
+.vs/
+*.user
+*.suo
