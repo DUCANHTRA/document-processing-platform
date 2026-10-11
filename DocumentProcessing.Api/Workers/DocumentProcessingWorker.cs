@@ -78,7 +78,7 @@ public class DocumentProcessingWorker : BackgroundService
      * We only lock the row long enough to claim the job, then we release the lock.
      * This keeps the system safe without blocking other workers for too long.
      */
-    private async Task<ProcessingJob?> ClaimNextJobAsync(
+    public static async Task<ProcessingJob?> ClaimNextJobAsync(
         AppDbContext context,
         CancellationToken cancellationToken)
     {
