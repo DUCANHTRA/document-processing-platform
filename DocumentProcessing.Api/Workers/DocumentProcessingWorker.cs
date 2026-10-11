@@ -124,6 +124,128 @@ public class DocumentProcessingWorker : BackgroundService
         return job;
     }
 
+
+    public static async Task ProcessClaimedJobAsync(
+    AppDbContext context,
+    IFileProcessor fileProcessor,
+    ProcessingJob job,
+    CancellationToken stoppingToken)
+    {
+        var jobId = job.Id;
+        var leaseToken = job.LeaseToken!.Value;
+
+        try
+        {
+            Console.WriteLine($"Started processing job {job.Id}");
+
+            var document = await context.Documents
+            .FirstAsync(
+                document => document.Id == job.DocumentId,
+                stoppingToken);
+
+            var text = await fileProcessor.ProcessAsync(
+                document.StoragePath,
+                stoppingToken);
+            
+            Console.WriteLine($"Extracted text from {document.FileName}:");
+
+            var result = await context.ProcessingResults
+                .FirstOrDefaultAsync(
+                    result => result.DocumentId == document.Id,
+                    stoppingToken);
+
+            if (result is null)
+            {
+                result = new ProcessingResult
+                {
+                    DocumentId = document.Id,
+                    ExtractedText = text,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                context.ProcessingResults.Add(result);
+            }
+            else
+            {
+                result.ExtractedText = text;
+            }
+
+            await using var completeTx =
+                await context.Database.BeginTransactionAsync(stoppingToken);
+
+            await context.SaveChangesAsync(stoppingToken);
+
+            var completedAt = DateTime.UtcNow;
+
+            var updated = await context.ProcessingJobs
+                .Where(j => j.Id == jobId && j.LeaseToken == leaseToken)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(j => j.Status, "Completed")
+                    .SetProperty(j => j.CompletedAt, completedAt)
+                    .SetProperty(j => j.NextRetryAt, (DateTime?)null)
+                    .SetProperty(j => j.ErrorMessage, (string?)null)
+                    .SetProperty(j => j.LeaseToken, (Guid?)null)
+                    .SetProperty(j => j.LeaseExpiresAt, (DateTime?)null),
+                    stoppingToken);
+            
+            if (updated == 0)
+            {
+                await completeTx.RollbackAsync(stoppingToken);
+
+                Console.WriteLine(
+                    $"Job {jobId} lost its lease. Result discarded.");
+            }
+            else
+            {
+                await completeTx.CommitAsync(stoppingToken);
+
+                Console.WriteLine($"Completed job {jobId}");
+            }
+        }
+        catch (OperationCanceledException)
+            when (stoppingToken.IsCancellationRequested)
+        {
+            // Application is shutting down.
+        }
+        catch (Exception ex)
+        {
+            context.ChangeTracker.Clear();
+
+            var failedJob = await context.ProcessingJobs
+                .FirstOrDefaultAsync(
+                    j => j.Id == jobId && j.LeaseToken == leaseToken,
+                    stoppingToken);
+
+            if (failedJob is null)
+            {
+                Console.WriteLine(
+                    $"Job {jobId} failed but lost its lease. Ignoring.");
+            }
+            else
+            {
+                JobFailureHandler.ApplyFailure(
+                    failedJob,
+                    ex.Message,
+                    DateTime.UtcNow);
+
+                if (failedJob.Status == "Pending")
+                {
+                    Console.WriteLine(
+                        $"Job {failedJob.Id} failed. " +
+                        $"Retry {failedJob.RetryCount} of {failedJob.MaxRetryCount}. " +
+                        $"Will retry at {failedJob.NextRetryAt}.");
+                }
+                else
+                {
+                    Console.WriteLine(
+                        $"Job {failedJob.Id} permanently failed after " +
+                        $"{failedJob.RetryCount} attempts: {ex.Message}");
+                }
+
+                await context.SaveChangesAsync(stoppingToken);
+            }
+        }
+    }
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
@@ -151,135 +273,11 @@ public class DocumentProcessingWorker : BackgroundService
             //Processing Job
             if (job is not null)
             {
-                var jobId = job.Id;
-                var leaseToken = job.LeaseToken!.Value;
-
-                try
-                {
-                    Console.WriteLine(
-                        $"Started processing job {job.Id}");
-
-                    // Simulate processing
-                    var document = await context.Documents
-                        .FirstAsync(
-                            document => document.Id == job.DocumentId,
-                            stoppingToken);
-
-                    var text = await fileProcessor.ProcessAsync(
-                        document.StoragePath,
-                        stoppingToken
-                    );
-
-                    // Save extracted text to ProcessingResult table
-                    Console.WriteLine($"Extracted text from {document.FileName}:");
-
-                    var result = await context.ProcessingResults
-                        .FirstOrDefaultAsync(
-                            //compare Document Id from ProcessingResult and ProcessingJob
-                            result => result.DocumentId == document.Id,
-                            stoppingToken);
-
-                    if (result is null)
-                    {
-                        result = new ProcessingResult
-                        {
-                            DocumentId = document.Id,
-                            ExtractedText = text,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        context.ProcessingResults.Add(result);
-                    }
-                    else
-                    {
-                        result.ExtractedText = text;
-
-                    }
-
-
-                    //Update with lease token check
-                    await using var completeTx = await context.Database.BeginTransactionAsync(stoppingToken);
-
-                    await context.SaveChangesAsync(stoppingToken);
-
-                    var completedAt = DateTime.UtcNow;
-
-                    var updated = await context.ProcessingJobs
-                        .Where(j => j.Id == jobId && j.LeaseToken == leaseToken)
-                        .ExecuteUpdateAsync(setters => setters
-                            .SetProperty(j => j.Status, "Completed")
-                            .SetProperty(j => j.CompletedAt, completedAt)
-                            .SetProperty(j => j.NextRetryAt, (DateTime?)null)
-                            .SetProperty(j => j.ErrorMessage, (string?)null)
-                            .SetProperty(j => j.LeaseToken, (Guid?)null)
-                            .SetProperty(j => j.LeaseExpiresAt, (DateTime?)null),
-                            stoppingToken);
-
-                    // Lease expires
-                    if (updated == 0)
-                    {
-                        await completeTx.RollbackAsync(stoppingToken);
-
-                        Console.WriteLine(
-                            $"Job {jobId} lost its lease. Result discarded.");
-                    }
-                    else
-                    {
-                        await completeTx.CommitAsync(stoppingToken);
-
-                        Console.WriteLine($"Completed job {jobId}");
-                    }
-                }
-                // Catch error 1
-                catch (OperationCanceledException)
-                    when (stoppingToken.IsCancellationRequested)
-                {
-                    // Application is shutting down.
-                }
-                // Catch error if Job Failed or Token Expires
-                catch (Exception ex)
-                {
-                    context.ChangeTracker.Clear();
-
-                    // Check if current job still belongs to this worker
-                    var failedJob = await context.ProcessingJobs
-                        .FirstOrDefaultAsync(
-                            j => j.Id == jobId && j.LeaseToken == leaseToken,
-                            stoppingToken);
-                    
-                    // Failed and expired token
-                    if (failedJob is null)
-                    {
-                        Console.WriteLine(
-                            $"Job {jobId} failed but lost its lease. Ignoring.");
-                    }
-
-                    // Failed and valid token
-                    else
-                    {
-                        JobFailureHandler.ApplyFailure(
-                            failedJob,
-                            ex.Message,
-                            DateTime.UtcNow);
-                        
-                        if (failedJob.Status == "Pending")
-                        {
-                            Console.WriteLine(
-                                $"Job {failedJob.Id} failed. " +
-                                $"Retry {failedJob.RetryCount} of {failedJob.MaxRetryCount}. " +
-                                $"Will retry at {failedJob.NextRetryAt}.");
-                        }
-                        else
-                        {
-                            Console.WriteLine(
-                                $"Job {failedJob.Id} permanently failed after " +
-                                $"{failedJob.RetryCount} attempts: {ex.Message}");
-                        }
-
-                        await context.SaveChangesAsync(stoppingToken);
-                    }
-                }
-
+                await ProcessClaimedJobAsync(
+                    context,
+                    fileProcessor,
+                    job,
+                    stoppingToken);
             }
             await Task.Delay(
                 TimeSpan.FromSeconds(5),
