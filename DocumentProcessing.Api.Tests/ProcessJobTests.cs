@@ -8,7 +8,10 @@ namespace DocumentProcessing.Api.Tests;
 public class ProcessJobTests
 {
     // Helper
-    private static async Task AddPendingJobAsync(AppDbContext context)
+    private static async Task AddPendingJobAsync(
+        AppDbContext context,
+        int retryCount = 0,
+        int maxRetryCount = 3)
     {
         var document = new Document
         {
@@ -26,7 +29,9 @@ public class ProcessJobTests
         {
             DocumentId = document.Id,
             Status = "Pending",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            RetryCount = retryCount,
+            MaxRetryCount = maxRetryCount
         });
 
         await context.SaveChangesAsync();
@@ -65,6 +70,68 @@ public class ProcessJobTests
 
         Assert.Equal(job.DocumentId, result.DocumentId);
         Assert.Equal("Hello from fake PDF", result.ExtractedText);
+    }
+
+    [Fact]
+    public async Task ProcessClaimedJob_WhenFileFails_MovesJobBackToPending()
+    {
+        // Arrange
+        await using var context = await TestDatabase.CreateCleanContextAsync();
+        await AddPendingJobAsync(context, retryCount: 0, maxRetryCount: 3);
+
+        var claimed = await DocumentProcessingWorker.ClaimNextJobAsync(
+            context,
+            CancellationToken.None);
+
+        Assert.NotNull(claimed);
+
+        // Act
+        await DocumentProcessingWorker.ProcessClaimedJobAsync(
+            context,
+            new FailingFileProcessor(),
+            claimed,
+            CancellationToken.None);
+
+        // Assert
+        var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();
+
+        Assert.Equal("Pending", job.Status);
+        Assert.Equal(1, job.RetryCount);
+        Assert.Equal("PDF is corrupt", job.ErrorMessage);
+        Assert.True(job.NextRetryAt > DateTime.UtcNow);
+        Assert.Null(job.LeaseToken);
+
+        Assert.Empty(context.ProcessingResults.AsNoTracking());
+    }
+
+    [Fact]
+    public async Task ProcessClaimedJob_WhenRetriesAreUsedUp_MarksJobFailed()
+    {
+        // Arrange
+        await using var context = await TestDatabase.CreateCleanContextAsync();
+        await AddPendingJobAsync(context, retryCount: 3, maxRetryCount: 3);
+
+        var claimed = await DocumentProcessingWorker.ClaimNextJobAsync(
+            context,
+            CancellationToken.None);
+
+        Assert.NotNull(claimed);
+
+        // Act
+        await DocumentProcessingWorker.ProcessClaimedJobAsync(
+            context,
+            new FailingFileProcessor(),
+            claimed,
+            CancellationToken.None);
+
+        // Assert
+        var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();
+
+        Assert.Equal("Failed", job.Status);
+        Assert.Equal(4, job.RetryCount);
+        Assert.Equal("PDF is corrupt", job.ErrorMessage);
+        Assert.Null(job.NextRetryAt);
+        Assert.Null(job.LeaseToken);
     }
 
 }
