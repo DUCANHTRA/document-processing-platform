@@ -37,6 +37,18 @@ public class ProcessJobTests
         await context.SaveChangesAsync();
     }
 
+    private static async Task TakeOverJobAsync(int jobId, Guid newToken)
+    {
+        //  Create second context
+        await using var otherContext = TestDatabase.CreateContext();
+
+        // Change job's lease token in the database
+        await otherContext.ProcessingJobs
+            .Where(j => j.Id == jobId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(jobId => jobId.LeaseToken, newToken));
+    }
+
     // Test
     [Fact]
     public async Task ProcessClaimedJob_WhenFileIsRead_CompletesJobAndSavesText()
@@ -132,6 +144,92 @@ public class ProcessJobTests
         Assert.Equal("PDF is corrupt", job.ErrorMessage);
         Assert.Null(job.NextRetryAt);
         Assert.Null(job.LeaseToken);
+    }
+
+    [Fact]
+    public async Task ProcessClaimedJob_WhenLeaseWasLost_DoesNotCompleteJobOrSaveResult()
+    {
+        // Arrange
+        await using var context = await TestDatabase.CreateCleanContextAsync();
+        
+        // 1. Add a pending job 
+        await AddPendingJobAsync(context);
+
+        // 2. Claim pending job --> token AAA
+        var claimed = await DocumentProcessingWorker.ClaimNextJobAsync(
+            context,
+            CancellationToken.None);
+
+        Assert.NotNull(claimed);
+
+        var jobId = claimed.Id;
+        // Create a new token
+        var newToken = Guid.NewGuid();
+
+        // 3. Create a slow file reader
+        // Slow file reader reading
+        // Job changes owner
+        var slowReader = new CallbackFileProcessor(async () =>
+        {
+            await TakeOverJobAsync(jobId, newToken);
+            return "Text from the slow worker";
+        });
+
+        // Act
+        // 4. Worker A tries to finish
+        await DocumentProcessingWorker.ProcessClaimedJobAsync(
+            context,
+            slowReader,
+            claimed,
+            CancellationToken.None);
+
+        // Assert
+        var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();
+
+        Assert.Equal("Processing", job.Status);
+        Assert.Equal(newToken, job.LeaseToken);
+        Assert.Null(job.CompletedAt);
+
+        var results = await context.ProcessingResults.AsNoTracking().ToListAsync();
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public async Task ProcessClaimedJob_WhenLeaseWasLostAndFileFails_IgnoresTheFailure()
+    {
+        // Arrange
+        await using var context = await TestDatabase.CreateCleanContextAsync();
+        await AddPendingJobAsync(context);
+
+        var claimed = await DocumentProcessingWorker.ClaimNextJobAsync(
+            context,
+            CancellationToken.None);
+
+        Assert.NotNull(claimed);
+
+        var jobId = claimed.Id;
+        var newToken = Guid.NewGuid();
+
+        var brokenSlowReader = new CallbackFileProcessor(async () =>
+        {
+            await TakeOverJobAsync(jobId, newToken);
+            throw new InvalidOperationException("PDF is corrupt");
+        });
+
+        // Act
+        await DocumentProcessingWorker.ProcessClaimedJobAsync(
+            context,
+            brokenSlowReader,
+            claimed,
+            CancellationToken.None);
+
+        // Assert
+        var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();
+
+        Assert.Equal("Processing", job.Status);
+        Assert.Equal(newToken, job.LeaseToken);
+        Assert.Equal(0, job.RetryCount);
+        Assert.Null(job.ErrorMessage);
     }
 
 }
