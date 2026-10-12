@@ -5,7 +5,7 @@ namespace DocumentProcessing.Api.Tests;
 
 public static class TestDatabase
 {
-    private const string ConnectionString =
+    public const string ConnectionString =
         "Host=localhost;Port=5432;Database=document_processing_test;Username=postgres;Password=local_dev_password";
 
     public static AppDbContext CreateContext()
