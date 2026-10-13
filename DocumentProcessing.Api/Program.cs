@@ -16,6 +16,17 @@ builder.Services.AddControllers();
 // These are normal application services.
 // They are created once per HTTP request and then disposed.
 builder.Services.AddScoped<DocumentsService>();
+
+// Add Supabase Setting
+var supabaseSettings = builder.Configuration
+    .GetSection("Supabase")
+    .Get<SupabaseSettings>() ?? new SupabaseSettings();
+
+supabaseSettings.Validate();
+
+builder.Services.AddSingleton(supabaseSettings);
+
+// Add Local File storage
 builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
