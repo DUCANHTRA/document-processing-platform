@@ -17,7 +17,8 @@ public class SupabaseFileStorage : IFileStorage
         Stream file,
         string fileName)
     {
-        var objectPath = fileName;
+        var extension = Path.GetExtension(fileName).ToLowerInvariant(); // takes ending of the name (.pdf)
+        var objectPath = $"{Guid.NewGuid()}{extension}";  //add random id to the front
 
         var url = $"storage/v1/object/{_settings.Bucket}/{Uri.EscapeDataString(objectPath)}";
 
