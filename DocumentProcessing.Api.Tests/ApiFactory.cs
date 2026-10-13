@@ -17,6 +17,11 @@ public class ApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable(
             "ConnectionStrings__DefaultConnection",
             TestDatabase.ConnectionString);
+
+        // 2. Supabase Setting
+        Environment.SetEnvironmentVariable("Supabase__Url", "http://localhost");
+        Environment.SetEnvironmentVariable("Supabase__Bucket", "test-bucket");
+        Environment.SetEnvironmentVariable("Supabase__SecretKey", "test-key");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
