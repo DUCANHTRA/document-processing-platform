@@ -27,7 +27,11 @@ supabaseSettings.Validate();
 builder.Services.AddSingleton(supabaseSettings);
 
 // Add Local File storage
-builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+builder.Services.AddHttpClient<IFileStorage, SupabaseFileStorage>(client =>
+{
+    client.BaseAddress = new Uri(supabaseSettings.Url.TrimEnd('/') + "/");
+    client.DefaultRequestHeaders.Add("apikey", supabaseSettings.SecretKey);
+});
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
