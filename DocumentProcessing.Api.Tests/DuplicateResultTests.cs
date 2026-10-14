@@ -48,6 +48,7 @@ public class DuplicateResultTests
 
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             firstContext,
+            new FakeFileStorage(),
             new FakeFileProcessor(),
             firstClaim,
             CancellationToken.None);
@@ -72,6 +73,7 @@ public class DuplicateResultTests
 
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             secondContext,
+            new FakeFileStorage(),
             secondReader,
             secondClaim,
             CancellationToken.None);

@@ -66,6 +66,7 @@ public class ProcessJobTests
         // Act
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             context,
+            new FakeFileStorage(),
             new FakeFileProcessor(),
             claimed,
             CancellationToken.None);
@@ -100,6 +101,7 @@ public class ProcessJobTests
         // Act
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             context,
+            new FakeFileStorage(),
             new FailingFileProcessor(),
             claimed,
             CancellationToken.None);
@@ -132,6 +134,7 @@ public class ProcessJobTests
         // Act
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             context,
+            new FakeFileStorage(),
             new FailingFileProcessor(),
             claimed,
             CancellationToken.None);
@@ -179,6 +182,7 @@ public class ProcessJobTests
         // 4. Worker A tries to finish
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             context,
+            new FakeFileStorage(),
             slowReader,
             claimed,
             CancellationToken.None);
@@ -219,6 +223,7 @@ public class ProcessJobTests
         // Act
         await DocumentProcessingWorker.ProcessClaimedJobAsync(
             context,
+            new FakeFileStorage(),
             brokenSlowReader,
             claimed,
             CancellationToken.None);

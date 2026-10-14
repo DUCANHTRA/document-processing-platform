@@ -13,7 +13,7 @@ public class CallbackFileProcessor : IFileProcessor
     }
 
     public Task<string> ProcessAsync(
-        string filePath,
+        Stream file,
         CancellationToken cancellationToken)
     {
         return _callback();
