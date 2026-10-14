@@ -38,4 +38,27 @@ public class SupabaseFileStorage : IFileStorage
 
         return objectPath;
     }
+
+    public async Task<Stream> OpenReadAsync(
+        string storagePath,
+        CancellationToken cancellationToken)
+    {
+        var url = $"storage/v1/object/authenticated/{_settings.Bucket}/{Uri.EscapeDataString(storagePath)}";
+
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+
+            throw new InvalidOperationException(
+                $"Supabase download failed ({(int)response.StatusCode}): {body}");
+        }
+
+        var memory = new MemoryStream();
+        await response.Content.CopyToAsync(memory, cancellationToken);
+        memory.Position = 0;
+
+        return memory;
+    }
 }

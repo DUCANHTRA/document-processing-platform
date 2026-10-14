@@ -19,4 +19,11 @@ public class LocalFileStorage : IFileStorage
 
         return filePath;
     }
+
+    public Task<Stream> OpenReadAsync(
+        string storagePath,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Stream>(File.OpenRead(storagePath));
+    }
 }

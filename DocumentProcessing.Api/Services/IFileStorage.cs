@@ -6,4 +6,9 @@ public interface IFileStorage
         Stream file,
         string fileName
     );
+
+    Task<Stream> OpenReadAsync(
+        string storagePath,
+        CancellationToken cancellationToken
+    );
 }
