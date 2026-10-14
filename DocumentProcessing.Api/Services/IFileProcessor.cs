@@ -3,6 +3,6 @@ namespace DocumentProcessing.Api.Services;
 public interface IFileProcessor
 {
     Task<string> ProcessAsync(
-        string filePath,
+        Stream file,
         CancellationToken cancellationToken);
 }

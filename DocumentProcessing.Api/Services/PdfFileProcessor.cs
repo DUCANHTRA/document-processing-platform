@@ -5,10 +5,10 @@ namespace DocumentProcessing.Api.Services;
 public class PdfFileProcessor : IFileProcessor
 {
     public Task<string> ProcessAsync(
-        string filePath,
+        Stream file,
         CancellationToken cancellationToken)
     {
-        using var document = PdfDocument.Open(filePath);
+        using var document = PdfDocument.Open(file);
 
         var text = string.Join(
             Environment.NewLine,

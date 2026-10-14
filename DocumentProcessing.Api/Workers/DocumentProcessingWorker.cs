@@ -127,6 +127,7 @@ public class DocumentProcessingWorker : BackgroundService
 
     public static async Task ProcessClaimedJobAsync(
     AppDbContext context,
+    IFileStorage fileStorage,
     IFileProcessor fileProcessor,
     ProcessingJob job,
     CancellationToken stoppingToken)
@@ -143,9 +144,13 @@ public class DocumentProcessingWorker : BackgroundService
                 document => document.Id == job.DocumentId,
                 stoppingToken);
 
-            var text = await fileProcessor.ProcessAsync(
+            // close the stream after done reading using 'await using'
+            await using var file = await fileStorage.OpenReadAsync(
                 document.StoragePath,
                 stoppingToken);
+            
+            var text = await fileProcessor.ProcessAsync(
+                file, stoppingToken);
             
             Console.WriteLine($"Extracted text from {document.FileName}:");
 
@@ -262,6 +267,10 @@ public class DocumentProcessingWorker : BackgroundService
                 scope.ServiceProvider
                     .GetRequiredService<IFileProcessor>();
 
+            var fileStorage = 
+                scope.ServiceProvider
+                    .GetRequiredService<IFileStorage>();
+
             //Recover expired jobs
             await RecoverExpiredJobAsync(context, stoppingToken);
 
@@ -275,6 +284,7 @@ public class DocumentProcessingWorker : BackgroundService
             {
                 await ProcessClaimedJobAsync(
                     context,
+                    fileStorage,
                     fileProcessor,
                     job,
                     stoppingToken);
