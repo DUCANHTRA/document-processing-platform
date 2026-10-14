@@ -15,4 +15,11 @@ public class FakeFileStorage : IFileStorage
         (nothing exists)
         */
     }
+
+    public Task<Stream> OpenReadAsync(
+        string storagePath,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult<Stream>(new MemoryStream());
+    }
 }
