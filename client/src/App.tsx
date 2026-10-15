@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useRef, useState, useEffect } from "react";
 import DocumentTable from "@/components/ui/DocumentTable";
-import { getDocuments } from "@/api/documents";
+import { getDocuments, uploadDocument } from "@/api/documents";
 import type { Document } from "@/api/documents";
 
 function App() {
@@ -9,6 +9,10 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+
+  
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadDocuments() {
@@ -22,6 +26,39 @@ function App() {
 
     loadDocuments();
   }, []);
+
+
+  async function handleUpload() {
+    if (!selectedFile) {
+      setUploadError("Please select a PDF first.");
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+
+    try {
+      await uploadDocument(selectedFile);
+
+      const updatedDocuments = await getDocuments();
+      setDocuments(updatedDocuments);
+
+      setSelectedFile(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      setUploadError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while uploading."
+      );
+    } finally {
+      setIsUploading(false);
+    }
+  }
+
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -71,9 +108,18 @@ function App() {
                 }}
               />
 
-              <Button type="button" onClick={() => fileInputRef.current?.click()}>
-                <span>Upload PDF</span>
+              <Button
+                onClick={handleUpload}
+                disabled={!selectedFile || isUploading}
+              >
+                {isUploading ? "Uploading..." : "Upload PDF"}
               </Button>
+
+              {uploadError && (
+                <p className="mt-2 text-sm text-red-600">
+                  {uploadError}
+                </p>
+              )}
           </div>
           </div>
 
