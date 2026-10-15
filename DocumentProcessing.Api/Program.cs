@@ -56,8 +56,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-//Middleware to redirect HTTP requests to HTTPS
-app.UseHttpsRedirection();
+// Enforce HTTPS outside development. The Vite dev server proxies local /api calls over HTTP.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.MapControllers();
 
 app.MapGet("/api/health", () =>
