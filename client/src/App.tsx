@@ -9,7 +9,7 @@ function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [documentStatuses, setDocumentStatues] = useState<Record<number, ProcessingStatus>>({});
+  const [documentStatuses, setDocumentStatues] = useState<Record<number, ProcessingStatus | null>>({});
 
   
   const [isUploading, setIsUploading] = useState(false);

@@ -12,7 +12,7 @@ import type { Document, ProcessingStatus } from "@/api/documents";
 
 interface DocumentTableProps {
   documents: Document[];
-  documentStatuses: Record<number, ProcessingStatus>;
+  documentStatuses: Record<number, ProcessingStatus | null>;
 }
 
 function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
@@ -36,7 +36,9 @@ function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
               <TableCell>{document.id}</TableCell>
               <TableCell>
               <Badge>
-                {documentStatuses[document.id]?.status ?? "Loading..."}
+                {documentStatuses[document.id] === undefined
+                  ? "Loading..."
+                  : documentStatuses[document.id]?.status ?? "No status"}
               </Badge>
             </TableCell>
             </TableRow>

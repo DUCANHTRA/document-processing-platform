@@ -36,14 +36,19 @@ export async function uploadDocument(file: File): Promise<Document> {
     return response.json();
 }
 
-export async function getDocumentStatus(documentId: number): Promise<ProcessingStatus> 
+export async function getDocumentStatus(documentId: number): Promise<ProcessingStatus | null>
 {
     const response = await fetch(
       `/api/documents/${documentId}/status`
     );
 
+    // A document can exist before a processing job has been created.
+    if (response.status === 404) {
+      return null;
+    }
+
     if (!response.ok) {
-      throw new Error("Failed to fetch document status");
+      throw new Error(`Failed to fetch document status (${response.status})`);
     }
 
     return response.json();
