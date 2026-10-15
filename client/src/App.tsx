@@ -97,29 +97,48 @@ function App() {
             </div>
 
           <div>
+            <div className="flex items-center gap-3">
               <input
                 ref={fileInputRef}
                 type="file"
-                className="hidden"
                 accept="application/pdf"
+                className="hidden"
                 onChange={(event) => {
                   const file = event.target.files?.[0] ?? null;
                   setSelectedFile(file);
+                  setUploadError(null);
                 }}
               />
 
               <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                Select PDF
+              </Button>
+
+              <Button
+                type="button"
                 onClick={handleUpload}
                 disabled={!selectedFile || isUploading}
               >
                 {isUploading ? "Uploading..." : "Upload PDF"}
               </Button>
+            </div>
 
-              {uploadError && (
-                <p className="mt-2 text-sm text-red-600">
-                  {uploadError}
-                </p>
-              )}
+            {selectedFile && (
+              <p className="mt-2 text-sm text-slate-600">
+                Selected file: {selectedFile.name}
+              </p>
+            )}
+
+            {uploadError && (
+              <p className="mt-2 text-sm text-red-600">
+                {uploadError}
+              </p>
+            )}
           </div>
           </div>
 
