@@ -1,10 +1,24 @@
 import { Button } from "@/components/ui/button";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import DocumentTable from "@/components/ui/DocumentTable";
+import { getDocuments } from "./api/documents";
+
 function App() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function loadDocuments() {
+      try {
+        const documents = await getDocuments();
+        console.log("Documents from API:", documents)
+      } catch (error) {
+        console.error("Could not load documents:", error);
+      }
+    }
+    loadDocuments();
+  }, [])
 
   return (
     <div className="min-h-screen bg-slate-50">
