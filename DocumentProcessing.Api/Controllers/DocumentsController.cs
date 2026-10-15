@@ -38,6 +38,19 @@ public class DocumentsController : ControllerBase
         return Ok(document);
     }
 
+    [HttpGet("{id}/status")]
+    public async Task<IActionResult> GetProcessingStatus(int id)
+    {
+        var status = await _documentService.GetProcessingStatus(id);
+
+        if (status is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(status);
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateDocument(IFormFile file)
     {

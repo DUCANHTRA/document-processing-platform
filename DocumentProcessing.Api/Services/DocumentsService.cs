@@ -2,7 +2,6 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.DTOs;
 using DocumentProcessing.Api.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Http;
 
 
 namespace DocumentProcessing.Api.Services;
@@ -72,5 +71,24 @@ public class DocumentsService
         await _context.SaveChangesAsync();
 
         return document;
+    }
+
+    public async Task<ProcessingStatusDto> GetProcessingStatus(int documentId)
+    {
+        var job = await _context.ProcessingJobs
+            .FirstOrDefaultAsync(job => job.DocumentId == documentId);
+
+        if (job is null)
+        {
+            return null;
+        }
+
+        return new ProcessingStatusDto
+        {
+            DocumentId = job.DocumentId,
+            JobId = job.Id,
+            Status = job.Status,
+            ErrorMessage = job.ErrorMessage
+        };
     }
 }
