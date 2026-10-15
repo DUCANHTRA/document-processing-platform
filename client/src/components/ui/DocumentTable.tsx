@@ -8,13 +8,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import type { Document } from "@/api/documents";
+import type { Document, ProcessingStatus } from "@/api/documents";
 
 interface DocumentTableProps {
   documents: Document[];
+  documentStatuses: Record<number, ProcessingStatus>;
 }
 
-function DocumentTable({ documents }: DocumentTableProps) {
+function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
   return (
     <div className="mt-8 rounded-lg border bg-white">
       <Table>
@@ -22,6 +23,7 @@ function DocumentTable({ documents }: DocumentTableProps) {
           <TableRow>
             <TableHead>Document</TableHead>
             <TableHead>ID</TableHead>
+            <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -32,6 +34,11 @@ function DocumentTable({ documents }: DocumentTableProps) {
                 {document.fileName}
               </TableCell>
               <TableCell>{document.id}</TableCell>
+              <TableCell>
+              <Badge>
+                {documentStatuses[document.id]?.status ?? "Loading..."}
+              </Badge>
+            </TableCell>
             </TableRow>
           ))}
         </TableBody>

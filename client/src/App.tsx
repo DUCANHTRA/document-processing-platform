@@ -1,14 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { useRef, useState, useEffect } from "react";
 import DocumentTable from "@/components/ui/DocumentTable";
-import { getDocuments, uploadDocument } from "@/api/documents";
-import type { Document } from "@/api/documents";
+import { getDocuments, getDocumentStatus, uploadDocument } from "@/api/documents";
+import type { Document, ProcessingStatus } from "@/api/documents";
 
 function App() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [documentStatuses, setDocumentStatues] = useState<Record<number, ProcessingStatus>>({});
 
   
   const [isUploading, setIsUploading] = useState(false);
@@ -19,6 +20,16 @@ function App() {
       try {
         const data = await getDocuments();
         setDocuments(data);
+
+        const statusEntries = await Promise.all(
+          data.map(async (document) => {
+            const status = await getDocumentStatus(document.id);
+
+            return [document.id, status] as const;
+          })
+        );
+
+        setDocumentStatues(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error("Could not load documents:", error);
       }
@@ -143,7 +154,10 @@ function App() {
           </div>
 
           {/* Temporary placeholder */}
-          <DocumentTable documents={documents} />
+          <DocumentTable
+            documents={documents}
+            documentStatuses={documentStatuses}
+          />
         </main>
       </div>
     </div>
