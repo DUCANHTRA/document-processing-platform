@@ -1,9 +1,14 @@
-export async function getDocuments() {
-    const response = await fetch("/api/documents");
+export interface Document {
+  id: number;
+  fileName: string;
+}
 
-    if (!response.ok) {
-        throw new Error("Failed to fetch documents");
-    }
+export async function getDocuments(): Promise<Document[]> {
+  const response = await fetch("/api/documents");
 
-    return response.json();
+  if (!response.ok) {
+    throw new Error("Failed to fetch documents");
+  }
+
+  return response.json();
 }

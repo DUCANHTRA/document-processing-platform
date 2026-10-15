@@ -1,24 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { useRef, useState, useEffect } from "react";
 import DocumentTable from "@/components/ui/DocumentTable";
-import { getDocuments } from "./api/documents";
+import { getDocuments } from "@/api/documents";
+import type { Document } from "@/api/documents";
 
 function App() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [documents, setDocuments] = useState<Document[]>([]);
 
   useEffect(() => {
     async function loadDocuments() {
       try {
-        const documents = await getDocuments();
-        console.log("Documents from API:", documents)
+        const data = await getDocuments();
+        setDocuments(data);
       } catch (error) {
         console.error("Could not load documents:", error);
       }
     }
+
     loadDocuments();
-  }, [])
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -75,7 +78,7 @@ function App() {
           </div>
 
           {/* Temporary placeholder */}
-          <DocumentTable />
+          <DocumentTable documents={documents} />
         </main>
       </div>
     </div>
