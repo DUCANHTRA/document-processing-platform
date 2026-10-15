@@ -2,6 +2,8 @@ using DocumentProcessing.Api.Services;
 using DocumentProcessing.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using DocumentProcessing.Api.Workers;
+using DocumentProcessing.Api.Models;
+using Microsoft.AspNetCore.Identity;
 
 // Builder helps configure the app and all services.
 // This is the place where we register the app's dependencies.
@@ -16,6 +18,8 @@ builder.Services.AddControllers();
 // These are normal application services.
 // They are created once per HTTP request and then disposed.
 builder.Services.AddScoped<DocumentsService>();
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<PasswordService>();
 
 // Add Supabase Setting
 var supabaseSettings = builder.Configuration
