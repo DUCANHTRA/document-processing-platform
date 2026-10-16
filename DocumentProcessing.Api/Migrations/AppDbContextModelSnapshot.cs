@@ -48,7 +48,12 @@ namespace DocumentProcessing.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Documents");
                 });
@@ -156,6 +161,15 @@ namespace DocumentProcessing.Api.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("DocumentProcessing.Api.Models.Document", b =>
+                {
+                    b.HasOne("DocumentProcessing.Api.Models.User", "User")
+                        .WithMany("Documents")
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DocumentProcessing.Api.Models.ProcessingJob", b =>
                 {
                     b.HasOne("DocumentProcessing.Api.Models.Document", null)
@@ -168,6 +182,11 @@ namespace DocumentProcessing.Api.Migrations
             modelBuilder.Entity("DocumentProcessing.Api.Models.Document", b =>
                 {
                     b.Navigation("ProcessingJob");
+                });
+
+            modelBuilder.Entity("DocumentProcessing.Api.Models.User", b =>
+                {
+                    b.Navigation("Documents");
                 });
 #pragma warning restore 612, 618
         }

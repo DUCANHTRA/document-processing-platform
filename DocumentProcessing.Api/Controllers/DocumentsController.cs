@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DocumentProcessing.Api.Services;
 using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace DocumentProcessing.Api.Controllers;
 
@@ -22,14 +23,28 @@ public class DocumentsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> Documents()//IActionResult return HTTP response
     {
-        var documents = await _documentService.GetDocuments();
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var documents = await _documentService.GetDocumentsForUser(userId);
         return Ok(documents);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetDocument(int id)
     {
-        var document = await _documentService.GetDocument(id);
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var document = await _documentService.GetDocumentForUser(id, userId);
 
         if (document is null)
         {
@@ -55,8 +70,13 @@ public class DocumentsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateDocument(IFormFile file)
     {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
         // Pass the validated request data to the service and wait for the new document to be saved.
-        var document = await _documentService.CreateDocument(file);
+        var document = await _documentService.CreateDocument(file, userId);
     
         // Return HTTP 201 Created, include the new document in the response body,
         // and set the Location header to the URL for retrieving it with GetDocument.

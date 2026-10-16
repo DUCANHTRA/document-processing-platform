@@ -35,7 +35,27 @@ public class DocumentsService
             .FirstOrDefaultAsync(document => document.Id == id);
     }
 
-    public async Task<Document> CreateDocument(IFormFile file)
+    public async Task<object[]> GetDocumentsForUser(int userId)
+    {
+        return await _context.Documents
+            .Where(document => document.UserId == userId)
+            .Select(document => new
+            {
+                id = document.Id,
+                fileName = document.FileName
+            })
+            .ToArrayAsync();
+    }
+
+    public async Task<Document?> GetDocumentForUser(int id, int userId)
+    {
+        return await _context.Documents
+            .FirstOrDefaultAsync(document =>
+                document.Id == id &&
+                document.UserId == userId);
+    }
+
+    public async Task<Document> CreateDocument(IFormFile file, int userId)
     {
         var storagePath = await _fileStorage.SaveAsync(
             file.OpenReadStream(),
@@ -47,7 +67,8 @@ public class DocumentsService
             ContentType = file.ContentType,
             FileSize = file.Length,
             StoragePath = storagePath,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         _context.Documents.Add(document);
