@@ -20,6 +20,7 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<DocumentsService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<PasswordService>();
+builder.Services.AddScoped<AuthService>();
 
 // Add Supabase Setting
 var supabaseSettings = builder.Configuration
