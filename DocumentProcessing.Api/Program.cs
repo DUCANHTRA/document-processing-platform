@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using DocumentProcessing.Api.Workers;
 using DocumentProcessing.Api.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 // Builder helps configure the app and all services.
 // This is the place where we register the app's dependencies.
@@ -27,6 +30,34 @@ builder.Services.AddScoped<AuthService>();
 var supabaseSettings = builder.Configuration
     .GetSection("Supabase")
     .Get<SupabaseSettings>() ?? new SupabaseSettings();
+
+var jwtSecret = builder.Configuration["Jwt:Secret"]
+    ?? throw new InvalidOperationException("JWT signing secret is not configured.");
+
+var signingKey = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(jwtSecret));
+
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = signingKey,
+
+            ValidateIssuer = true,
+            ValidIssuer = "DocumentProcessing.Api",
+
+            ValidateAudience = true,
+            ValidAudience = "DocumentProcessing.Client",
+
+            ValidateLifetime = true
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 supabaseSettings.Validate();
 
@@ -67,6 +98,11 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+// Middleware
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 app.MapGet("/api/health", () =>
@@ -80,11 +116,6 @@ app.MapGet("/api/health", () =>
 
 //Run the app
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
 
 public partial class Program { }
 
