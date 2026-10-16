@@ -1,6 +1,5 @@
 using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
-using Microsoft.AspNetCore.Razor.TagHelpers;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 
@@ -53,6 +52,26 @@ public class AuthService
             // The unique index also protects against two simultaneous registrations.
             return null;
         }
+    }
+
+    public async Task<User?> LoginAsync(string email, string password)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        var user = await _context.Users
+        .FirstOrDefaultAsync(user => user.Email == normalizedEmail);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        var passwordIsCorrect = _passwordService.VerifyPassword(
+            user,
+            user.PasswordHash,
+            password);
+
+        return passwordIsCorrect ? user : null;
     }
 
 }

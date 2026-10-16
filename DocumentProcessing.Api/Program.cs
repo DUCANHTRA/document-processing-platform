@@ -18,6 +18,7 @@ builder.Services.AddControllers();
 // These are normal application services.
 // They are created once per HTTP request and then disposed.
 builder.Services.AddScoped<DocumentsService>();
+builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<AuthService>();
