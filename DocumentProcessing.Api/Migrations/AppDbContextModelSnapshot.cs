@@ -48,7 +48,7 @@ namespace DocumentProcessing.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int?>("UserId")
+                    b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -165,7 +165,9 @@ namespace DocumentProcessing.Api.Migrations
                 {
                     b.HasOne("DocumentProcessing.Api.Models.User", "User")
                         .WithMany("Documents")
-                        .HasForeignKey("UserId");
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
