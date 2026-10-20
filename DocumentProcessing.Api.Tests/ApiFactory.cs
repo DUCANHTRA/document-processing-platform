@@ -22,6 +22,9 @@ public class ApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable("Supabase__Url", "http://localhost");
         Environment.SetEnvironmentVariable("Supabase__Bucket", "test-bucket");
         Environment.SetEnvironmentVariable("Supabase__SecretKey", "test-key");
+
+        // 3. Deterministic JWT signing key for test host
+        Environment.SetEnvironmentVariable("Jwt__Secret", "super-secret-test-key-32-chars-minimum!");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
