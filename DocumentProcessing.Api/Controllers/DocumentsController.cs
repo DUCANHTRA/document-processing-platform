@@ -67,6 +67,38 @@ public class DocumentsController : ControllerBase
         return Ok(status);
     }
 
+    [HttpGet("{id}/file")]
+    public async Task<IActionResult> DownloadFile(int id)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var stream = await _documentService.GetFileForUserAsync(
+                id,
+                userId,
+                HttpContext.RequestAborted);
+
+            var file = await _documentService.GetDocumentForUser(id, userId);
+
+            if (file is null)
+            {
+                return NotFound();
+            }
+
+            return File(stream, file.ContentType, file.FileName);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateDocument(IFormFile file)
     {

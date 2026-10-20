@@ -112,4 +112,20 @@ public class DocumentsService
             ErrorMessage = job.ErrorMessage
         };
     }
+
+    public async Task<Stream> GetFileForUserAsync(int documentId, int userId, CancellationToken cancellationToken)
+    {
+        var document = await _context.Documents
+            .FirstOrDefaultAsync(document =>
+                document.Id == documentId &&
+                document.UserId == userId,
+                cancellationToken);
+
+        if (document is null)
+        {
+            throw new KeyNotFoundException();
+        }
+
+        return await _fileStorage.OpenReadAsync(document.StoragePath, cancellationToken);
+    }
 }
