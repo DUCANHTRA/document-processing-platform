@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -118,6 +119,9 @@ public class AuthTests
             password = "example-only-password-2026"
         });
 
+        Assert.Equal(HttpStatusCode.Created, userA.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, userB.StatusCode);
+
         var loginA = await client.PostAsJsonAsync("/api/auth/login", new
         {
             email = "a@example.com",
@@ -133,22 +137,41 @@ public class AuthTests
         var tokenA = (await loginA.Content.ReadFromJsonAsync<Dictionary<string, string>>())!["token"];
         var tokenB = (await loginB.Content.ReadFromJsonAsync<Dictionary<string, string>>())!["token"];
 
-        var uploadA = await client.PostAsync(
-            "/api/documents",
-            new MultipartFormDataContent
+        var uploadARequest = new HttpRequestMessage(HttpMethod.Post, "/api/documents")
+        {
+            Content = new MultipartFormDataContent
             {
                 { new ByteArrayContent(new byte[] { 1, 2, 3 }), "file", "a.pdf" }
-            });
+            }
+        };
+        uploadARequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenA);
 
-        uploadA.Headers.Add("Authorization", $"Bearer {tokenA}");
+        var uploadAResponse = await client.SendAsync(uploadARequest);
+        Assert.Equal(HttpStatusCode.Created, uploadAResponse.StatusCode);
 
-        var uploadB = await client.PostAsync(
-            "/api/documents",
-            new MultipartFormDataContent
+        var uploadA = await uploadAResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var documentAId = uploadA.GetProperty("id").GetInt32();
+
+        var uploadBRequest = new HttpRequestMessage(HttpMethod.Post, "/api/documents")
+        {
+            Content = new MultipartFormDataContent
             {
                 { new ByteArrayContent(new byte[] { 4, 5, 6 }), "file", "b.pdf" }
-            });
+            }
+        };
+        uploadBRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
 
-        uploadB.Headers.Add("Authorization", $"Bearer {tokenB}");
+        var uploadBResponse = await client.SendAsync(uploadBRequest);
+        Assert.Equal(HttpStatusCode.Created, uploadBResponse.StatusCode);
+
+        var userAGetOwnDocument = new HttpRequestMessage(HttpMethod.Get, $"/api/documents/{documentAId}");
+        userAGetOwnDocument.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenA);
+        var ownDocumentResponse = await client.SendAsync(userAGetOwnDocument);
+        Assert.Equal(HttpStatusCode.OK, ownDocumentResponse.StatusCode);
+
+        var userBGetAFile = new HttpRequestMessage(HttpMethod.Get, $"/api/documents/{documentAId}");
+        userBGetAFile.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
+        var forbiddenResponse = await client.SendAsync(userBGetAFile);
+        Assert.Equal(HttpStatusCode.NotFound, forbiddenResponse.StatusCode);
     }
 }
