@@ -15,11 +15,12 @@ public class DocumentsServiceTests
         var file = CreateFormFile("invoice.pdf"); // fake files
 
         // Act
-        var document = await service.CreateDocument(file);
+        var document = await service.CreateDocument(file, userId: 42);
 
         // Assert
         Assert.Equal("invoice.pdf", document.FileName);
         Assert.Equal("fake-storage/invoice.pdf", document.StoragePath);
+        Assert.Equal(42, document.UserId);
 
         var job = Assert.Single(context.ProcessingJobs);
         Assert.Equal(document.Id, job.DocumentId);
