@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace DocumentProcessing.Api.Tests;
 
@@ -9,6 +10,7 @@ public class AuthTests
     [Fact]
     public async Task Register_WhenEmailIsNew_ReturnsCreated()
     {
+        await using var _ = await TestDatabase.CreateCleanContextAsync();
         await using var factory = new ApiFactory();
         var client = factory.CreateClient();
 
@@ -20,17 +22,16 @@ public class AuthTests
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
-        var body = await response.Content.ReadFromJsonAsync<dynamic>();
-        Assert.NotNull(body);
-
-        string? email = body!.email?.ToString();
-        Assert.Equal("new.user@example.com", email);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(body.TryGetProperty("email", out var emailElement));
+        Assert.Equal("new.user@example.com", emailElement.GetString());
     }
 
     //Test: duplicate email
     [Fact]
     public async Task Register_WhenEmailAlreadyExists_ReturnsConflict()
     {
+        await using var _ = await TestDatabase.CreateCleanContextAsync();
         await using var factory = new ApiFactory();
         var client = factory.CreateClient();
 
@@ -51,6 +52,7 @@ public class AuthTests
     [Fact]
     public async Task Login_WithCorrectPassword_ReturnsToken()
     {
+        await using var _ = await TestDatabase.CreateCleanContextAsync();
         await using var factory = new ApiFactory();
         var client = factory.CreateClient();
 
@@ -77,6 +79,7 @@ public class AuthTests
     [Fact]
     public async Task Login_WithWrongPassword_ReturnsUnauthorized()
     {
+        await using var _ = await TestDatabase.CreateCleanContextAsync();
         await using var factory = new ApiFactory();
         var client = factory.CreateClient();
 
@@ -99,6 +102,7 @@ public class AuthTests
     [Fact]
     public async Task UserCanOnlySeeTheirOwnDocuments()
     {
+        await using var _ = await TestDatabase.CreateCleanContextAsync();
         await using var factory = new ApiFactory();
         var client = factory.CreateClient();
 

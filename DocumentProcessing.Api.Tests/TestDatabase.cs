@@ -28,7 +28,7 @@ public static class TestDatabase
         await context.Database.MigrateAsync();
 
         await context.Database.ExecuteSqlRawAsync(
-            """TRUNCATE TABLE "ProcessingResults", "ProcessingJobs", "Documents" RESTART IDENTITY CASCADE""");
+            """TRUNCATE TABLE "ProcessingResults", "ProcessingJobs", "Documents", "Users" RESTART IDENTITY CASCADE""");
 
         return context;
     }
