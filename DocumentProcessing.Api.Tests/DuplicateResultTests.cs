@@ -10,13 +10,16 @@ public class DuplicateResultTests
     // Helper
     private static async Task AddPendingJobAsync(AppDbContext context)
     {
+        var userId = await TestDatabase.CreateUserAsync(context, $"duplicate-result-{Guid.NewGuid():N}@example.com");
+
         var document = new Document
         {
             FileName = "invoice.pdf",
             ContentType = "application/pdf",
             FileSize = 3,
             StoragePath = "fake/invoice.pdf",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         context.Documents.Add(document);
@@ -93,13 +96,16 @@ public class DuplicateResultTests
         // Arrange
         await using var context = await TestDatabase.CreateCleanContextAsync();
 
+        var userId = await TestDatabase.CreateUserAsync(context, $"duplicate-result-db-{Guid.NewGuid():N}@example.com");
+
         var document = new Document
         {
             FileName = "invoice.pdf",
             ContentType = "application/pdf",
             FileSize = 3,
             StoragePath = "fake/invoice.pdf",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         context.Documents.Add(document);

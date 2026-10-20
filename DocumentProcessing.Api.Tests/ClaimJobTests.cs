@@ -13,13 +13,16 @@ public class ClaimJobTests
     // Create new Processing Job
     private static async Task<ProcessingJob> AddPendingJobAsync(AppDbContext context)
     {
+        var userId = await TestDatabase.CreateUserAsync(context, $"claim-job-{Guid.NewGuid():N}@example.com");
+
         var document = new Document
         {
             FileName = "invoice.pdf",
             ContentType = "application/pdf",
             FileSize = 3,
             StoragePath = "faje/invoice.pdf",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         context.Documents.Add(document);

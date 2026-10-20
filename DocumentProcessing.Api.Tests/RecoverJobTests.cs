@@ -15,6 +15,8 @@ public class RecoverJobTests
         DateTime leaseExpiresAt)
     {
 
+        var userId = await TestDatabase.CreateUserAsync(context, $"recover-job-{Guid.NewGuid():N}@example.com");
+
         // Save a new document
         var document = new Document
         {
@@ -22,7 +24,8 @@ public class RecoverJobTests
             ContentType = "application/pdf",
             FileSize = 3,
             StoragePath = "fake/invoice.pdf",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         context.Documents.Add(document);

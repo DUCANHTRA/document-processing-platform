@@ -1,4 +1,5 @@
 using DocumentProcessing.Api.Data;
+using DocumentProcessing.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace DocumentProcessing.Api.Tests;
@@ -31,5 +32,20 @@ public static class TestDatabase
             """TRUNCATE TABLE "ProcessingResults", "ProcessingJobs", "Documents", "Users" RESTART IDENTITY CASCADE""");
 
         return context;
+    }
+
+    public static async Task<int> CreateUserAsync(AppDbContext context, string email)
+    {
+        var user = new User
+        {
+            Email = email,
+            PasswordHash = "test-password-hash",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
+
+        return user.Id;
     }
 }

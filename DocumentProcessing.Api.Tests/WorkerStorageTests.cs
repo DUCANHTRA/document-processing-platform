@@ -13,13 +13,16 @@ public class WorkerStorageTests
         AppDbContext context,
         string storagePath)
     {
+        var userId = await TestDatabase.CreateUserAsync(context, $"worker-storage-{Guid.NewGuid():N}@example.com");
+
         var document = new Document
         {
             FileName = "invoice.pdf",
             ContentType = "application/pdf",
             FileSize = 3,
             StoragePath = storagePath,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = userId
         };
 
         context.Documents.Add(document);
