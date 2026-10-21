@@ -94,23 +94,24 @@ public class DocumentsService
         return document;
     }
 
-    public async Task<ProcessingStatusDto> GetProcessingStatus(int documentId)
+    public async Task<ProcessingStatusDto?> GetProcessingStatus(int documentId, int userId)
     {
-        var job = await _context.ProcessingJobs
-            .FirstOrDefaultAsync(job => job.DocumentId == documentId);
+        var status = await (
+            from job in _context.ProcessingJobs
+            join document in _context.Documents
+                on job.DocumentId equals document.Id
+            where document.Id == documentId
+                && document.UserId == userId
+            select new ProcessingStatusDto
+            {
+                DocumentId = job.DocumentId,
+                JobId = job.Id,
+                Status = job.Status,
+                ErrorMessage = job.ErrorMessage
+            })
+            .FirstOrDefaultAsync();
 
-        if (job is null)
-        {
-            return null;
-        }
-
-        return new ProcessingStatusDto
-        {
-            DocumentId = job.DocumentId,
-            JobId = job.Id,
-            Status = job.Status,
-            ErrorMessage = job.ErrorMessage
-        };
+        return status;
     }
 
     public async Task<Stream> GetFileForUserAsync(int documentId, int userId, CancellationToken cancellationToken)

@@ -57,7 +57,14 @@ public class DocumentsController : ControllerBase
     [HttpGet("{id}/status")]
     public async Task<IActionResult> GetProcessingStatus(int id)
     {
-        var status = await _documentService.GetProcessingStatus(id);
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var status = await _documentService.GetProcessingStatus(id, userId);
 
         if (status is null)
         {
