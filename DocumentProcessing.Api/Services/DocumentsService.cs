@@ -94,6 +94,28 @@ public class DocumentsService
         return document;
     }
 
+    // Get Processing Result: Extracted text from documentId and userId
+    public async Task<ProcessingResultDto?> GetProcessingResult(
+    int documentId,
+    int userId)
+    {
+        var result = await (
+            from processingResult in _context.ProcessingResults
+            join document in _context.Documents
+                on processingResult.DocumentId equals document.Id
+            where document.Id == documentId
+                && document.UserId == userId
+            select new ProcessingResultDto
+            {
+                DocumentId = processingResult.DocumentId,
+                ExtractedText = processingResult.ExtractedText,
+                CreatedAt = processingResult.CreatedAt
+            })
+            .FirstOrDefaultAsync();
+
+        return result;
+    }
+
     public async Task<ProcessingStatusDto?> GetProcessingStatus(int documentId, int userId)
     {
         var status = await (

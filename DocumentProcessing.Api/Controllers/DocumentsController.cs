@@ -74,6 +74,26 @@ public class DocumentsController : ControllerBase
         return Ok(status);
     }
 
+    [HttpGet("{id}/result")]
+    public async Task<IActionResult> GetProcessingResult(int id)
+    {
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _documentService.GetProcessingResult(id, userId);
+
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(result);
+    }
+
     [HttpGet("{id}/file")]
     public async Task<IActionResult> DownloadFile(int id)
     {
