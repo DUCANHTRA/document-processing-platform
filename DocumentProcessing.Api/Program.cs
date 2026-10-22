@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using DocumentProcessing.Api.Hubs;
 
 // Builder helps configure the app and all services.
 // This is the place where we register the app's dependencies.
@@ -25,6 +26,7 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSignalR();
 
 // Add Supabase Setting
 var supabaseSettings = builder.Configuration
@@ -38,6 +40,7 @@ var signingKey = new SymmetricSecurityKey(
     Encoding.UTF8.GetBytes(jwtSecret));
 
 
+// JWT Authentication
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -55,15 +58,33 @@ builder.Services
 
             ValidateLifetime = true
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var requestPath = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    requestPath.StartsWithSegments("/hubs/processing"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
+        };
     });
 
+// Add Authorization
 builder.Services.AddAuthorization();
 
 supabaseSettings.Validate();
 
 builder.Services.AddSingleton(supabaseSettings);
 
-// Add Local File storage
+// Add Supabase File storage
 builder.Services.AddHttpClient<IFileStorage, SupabaseFileStorage>(client =>
 {
     client.BaseAddress = new Uri(supabaseSettings.Url.TrimEnd('/') + "/");
@@ -78,7 +99,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString)
 );
 
-// This is the important part for the tutorial:
+// This is the important step:
 // We register the background worker here.
 // ASP.NET Core will start it when the application starts.
 builder.Services.AddHostedService<DocumentProcessingWorker>();
@@ -102,6 +123,7 @@ if (!app.Environment.IsDevelopment())
 // Middleware
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<ProcessingHub>("/hubs/processing");
 
 app.MapControllers();
 
