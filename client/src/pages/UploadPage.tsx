@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import {
   uploadDocument
 } from "@/api/documents";
-import type { ProcessingStatus } from "@/api/documents";
 
 function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -11,9 +10,6 @@ function UploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-
-  const [processingStatus, setProcessingStatus] =
-    useState<ProcessingStatus | null>(null);
 
   async function handleUpload() {
     if (!selectedFile) {
@@ -23,7 +19,6 @@ function UploadPage() {
 
     setIsUploading(true);
     setUploadError(null);
-    setProcessingStatus(null);
 
     try {
       await uploadDocument(selectedFile);
