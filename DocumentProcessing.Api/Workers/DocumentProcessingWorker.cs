@@ -2,19 +2,24 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Services;
 using Microsoft.EntityFrameworkCore;
+using DocumentProcessing.Api.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace DocumentProcessing.Api.Workers;
 
 public class DocumentProcessingWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHubContext<ProcessingHub> _hubContext;
 
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(5);
 
     public DocumentProcessingWorker(
-        IServiceScopeFactory scopeFactory)
+        IServiceScopeFactory scopeFactory,
+        IHubContext<ProcessingHub> hubContext)
     {
         _scopeFactory = scopeFactory;
+        _hubContext = hubContext;
     }
 
     public static async Task RecoverExpiredJobAsync(
@@ -123,7 +128,6 @@ public class DocumentProcessingWorker : BackgroundService
 
         return job;
     }
-
 
     public static async Task ProcessClaimedJobAsync(
     AppDbContext context,
@@ -251,6 +255,46 @@ public class DocumentProcessingWorker : BackgroundService
             }
         }
     }
+
+    private async Task NotifyJobStatusAsync(
+        AppDbContext context,
+        int jobId,
+        CancellationToken cancellationToken)
+    {
+        var update = await (
+            from job in context.ProcessingJobs
+            join document in context.Documents
+                on job.DocumentId equals document.Id
+            where job.Id == jobId
+            select new
+            {
+                document.UserId,
+                job.DocumentId,
+                JobId = job.Id,
+                job.Status,
+                job.ErrorMessage
+            })
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (update is null)
+        {
+            return;
+        }
+
+        await _hubContext.Clients
+            .Group($"user-{update.UserId}")
+            .SendAsync(
+                "JobStatusChanged",
+                new
+                {
+                    update.DocumentId,
+                    update.JobId,
+                    update.Status,
+                    update.ErrorMessage
+                },
+                cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
@@ -282,11 +326,21 @@ public class DocumentProcessingWorker : BackgroundService
             //Processing Job
             if (job is not null)
             {
+                await NotifyJobStatusAsync(
+                    context,
+                    job.Id,
+                    stoppingToken);
+
                 await ProcessClaimedJobAsync(
                     context,
                     fileStorage,
                     fileProcessor,
                     job,
+                    stoppingToken);
+                
+                await NotifyJobStatusAsync(
+                    context,
+                    job.Id,
                     stoppingToken);
             }
             await Task.Delay(
