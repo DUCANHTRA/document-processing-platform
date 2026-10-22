@@ -15,6 +15,21 @@ interface DocumentTableProps {
   documentStatuses: Record<number, ProcessingStatus | null>;
 }
 
+function getStatusBadgeClass(status: string | undefined): string {
+  switch (status?.toLowerCase()) {
+    case "completed":
+      return "bg-green-100 text-green-800";
+    case "processing":
+      return "bg-blue-100 text-blue-800";
+    case "pending":
+      return "bg-amber-100 text-amber-800";
+    case "failed":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
+
 function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
   return (
     <div className="mt-8 rounded-lg border bg-white">
@@ -28,21 +43,27 @@ function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
         </TableHeader>
 
         <TableBody>
-          {documents.map((document) => (
-            <TableRow key={document.id}>
+          {documents.map((document) => {
+            const status = documentStatuses[document.id]?.status;
+            const label =
+              documentStatuses[document.id] === undefined
+                ? "Loading..."
+                : status ?? "No status";
+
+            return (
+              <TableRow key={document.id}>
               <TableCell className="font-medium">
                 {document.fileName}
               </TableCell>
               <TableCell>{document.id}</TableCell>
               <TableCell>
-              <Badge>
-                {documentStatuses[document.id] === undefined
-                  ? "Loading..."
-                  : documentStatuses[document.id]?.status ?? "No status"}
-              </Badge>
-            </TableCell>
-            </TableRow>
-          ))}
+                  <Badge className={getStatusBadgeClass(status)}>
+                    {label}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
 

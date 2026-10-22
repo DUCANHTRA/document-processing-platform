@@ -13,6 +13,10 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://localhost:5116",
+      "/hubs": {
+          target: "http://localhost:5116",
+          ws: true,
+        },
     },
   },
 });

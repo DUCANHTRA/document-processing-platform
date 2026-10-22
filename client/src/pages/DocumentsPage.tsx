@@ -8,6 +8,8 @@ import type {
   Document,
   ProcessingStatus,
 } from "@/api/documents";
+import { HubConnectionBuilder } from "@microsoft/signalr";
+import { getToken } from "@/api/auth";
 
 function DocumentsPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -37,6 +39,31 @@ function DocumentsPage() {
     }
 
     loadDocuments();
+  }, []);
+
+  //SignalR
+  useEffect(() => {
+    const connection = new HubConnectionBuilder()
+      .withUrl("/hubs/processing", {
+        accessTokenFactory: () => getToken() ?? "",
+      })
+      .withAutomaticReconnect()
+      .build();
+
+    connection.on("JobStatusChanged", (update: ProcessingStatus) => {
+      setDocumentStatuses((currentStatuses) => ({
+        ...currentStatuses,
+        [update.documentId]: update,
+      }));
+    });
+
+    connection.start().catch((error) => {
+      console.error("Could not connect to the status hub:", error);
+    });
+
+    return () => {
+      void connection.stop();
+    };
   }, []);
 
   return (
