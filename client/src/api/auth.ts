@@ -24,3 +24,19 @@ export async function login(email: string, password: string): Promise<void> {
 export function getToken(): string | null {
   return sessionStorage.getItem(tokenKey);
 }
+
+
+// Read saved token from sessionStorage and adds to request header Authorization - Bearer
+export async function authenticatedFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {}
+): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const token = getToken();
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  return fetch(input, { ...init, headers });
+}

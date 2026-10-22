@@ -1,8 +1,7 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  uploadDocument,
-  getDocumentStatus,
+  uploadDocument
 } from "@/api/documents";
 import type { ProcessingStatus } from "@/api/documents";
 

@@ -1,3 +1,5 @@
+import { authenticatedFetch } from "@/api/auth";
+
 export interface Document {
   id: number;
   fileName: string;
@@ -11,7 +13,7 @@ export interface ProcessingStatus {
 }
 
 export async function getDocuments(): Promise<Document[]> {
-  const response = await fetch("/api/documents");
+  const response = await authenticatedFetch("/api/documents");
 
   if (!response.ok) {
     throw new Error("Failed to fetch documents");
@@ -24,7 +26,7 @@ export async function uploadDocument(file: File): Promise<Document> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("api/documents", {
+    const response = await authenticatedFetch("api/documents", {
         method: "POST",
         body: formData,
     });
@@ -38,7 +40,7 @@ export async function uploadDocument(file: File): Promise<Document> {
 
 export async function getDocumentStatus(documentId: number): Promise<ProcessingStatus | null>
 {
-    const response = await fetch(
+    const response = await authenticatedFetch(
       `/api/documents/${documentId}/status`
     );
 
