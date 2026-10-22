@@ -1,6 +1,7 @@
 import { NavLink, Routes, Route } from "react-router";
 import UploadPage from "@/pages/UploadPage";
 import DocumentsPage from "@/pages/DocumentsPage";
+import LoginPage from "@/pages/LoginPage";
 
 function App() {
   return (
@@ -44,6 +45,7 @@ function App() {
 
         <main className="p-8">
           <Routes>
+            <Route path="/login" element={<LoginPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="*" element={<UploadPage />} />
