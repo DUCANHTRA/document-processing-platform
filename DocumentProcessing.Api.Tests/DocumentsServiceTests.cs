@@ -16,7 +16,7 @@ public class DocumentsServiceTests
         var file = CreateFormFile("invoice.pdf"); // fake files
 
         // Act
-        var document = await service.CreateDocument(file, userId: 42);
+        var document = await service.CreateDocument(file, userId: 42, "test-correlation-id");
 
         // Assert
         Assert.Equal("invoice.pdf", document.FileName);
