@@ -2,6 +2,7 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DocumentProcessing.Api.Tests;
 
@@ -11,7 +12,7 @@ public class DocumentsServiceTests
     public async Task CreateDocument_SavesDocumentAndPendingJob()
     {
         using var context = CreateContext(); // Fake DB
-        var service = new DocumentsService(new FakeFileStorage(), context); //Fake services
+        var service = new DocumentsService(new FakeFileStorage(), context, NullLogger<DocumentsService>.Instance); //Fake services
         var file = CreateFormFile("invoice.pdf"); // fake files
 
         // Act

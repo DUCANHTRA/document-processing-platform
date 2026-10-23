@@ -2,6 +2,7 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Workers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DocumentProcessing.Api.Tests;
 
@@ -64,7 +65,8 @@ public class RecoverJobTests
         // Act
         await DocumentProcessingWorker.RecoverExpiredJobAsync(
             context,
-            CancellationToken.None
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance
         );
         
         // Assert
@@ -92,7 +94,8 @@ public class RecoverJobTests
         // Act
         await DocumentProcessingWorker.RecoverExpiredJobAsync(
             context,
-            CancellationToken.None);
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance);
 
         // Assert
         var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();
@@ -117,7 +120,8 @@ public class RecoverJobTests
         // Act
         await DocumentProcessingWorker.RecoverExpiredJobAsync(
             context,
-            CancellationToken.None);
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance);
 
         // Assert
         var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();

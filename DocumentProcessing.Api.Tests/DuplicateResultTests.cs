@@ -2,6 +2,7 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Workers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DocumentProcessing.Api.Tests;
 
@@ -54,7 +55,8 @@ public class DuplicateResultTests
             new FakeFileStorage(),
             new FakeFileProcessor(),
             firstClaim,
-            CancellationToken.None);
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance);
 
         // Put the same job back in the queue
         // Does this bug exist in current codebase ?
@@ -79,7 +81,8 @@ public class DuplicateResultTests
             new FakeFileStorage(),
             secondReader,
             secondClaim,
-            CancellationToken.None);
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance);
 
         // Assert
         var results = await secondContext.ProcessingResults

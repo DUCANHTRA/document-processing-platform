@@ -3,6 +3,7 @@ using DocumentProcessing.Api.Data;
 using DocumentProcessing.Api.Models;
 using DocumentProcessing.Api.Workers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace DocumentProcessing.Api.Tests;
 
@@ -61,7 +62,8 @@ public class WorkerStorageTests
             storage,
             new ReadTextFileProcessor(),
             claimed,
-            CancellationToken.None);
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance);
 
         // Assert
         var requested = Assert.Single(storage.RequestedPaths);
@@ -93,7 +95,8 @@ public class WorkerStorageTests
             new FailingFileStorage(),
             new ReadTextFileProcessor(),
             claimed,
-            CancellationToken.None);
+            CancellationToken.None,
+            NullLogger<DocumentProcessingWorker>.Instance);
 
         // Assert
         var job = await context.ProcessingJobs.AsNoTracking().SingleAsync();
