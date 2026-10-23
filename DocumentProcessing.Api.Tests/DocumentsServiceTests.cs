@@ -26,6 +26,7 @@ public class DocumentsServiceTests
         var job = Assert.Single(context.ProcessingJobs);
         Assert.Equal(document.Id, job.DocumentId);
         Assert.Equal("Pending", job.Status);
+        Assert.Equal("test-correlation-id", job.CorrelationId);
     }
 
     private static AppDbContext CreateContext()
