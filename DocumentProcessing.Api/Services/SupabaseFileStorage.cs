@@ -13,6 +13,16 @@ public class SupabaseFileStorage : IFileStorage
         _settings = settings;
     }
 
+    public async Task CheckHealthAsync(CancellationToken cancellationToken)
+    {
+        var url = $"storage/v1/bucket/{Uri.EscapeDataString(_settings.Bucket)}";
+
+        using var request = new HttpRequestMessage(HttpMethod.Head, url);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+
+        response.EnsureSuccessStatusCode();
+    }
+
     public async Task<string> SaveAsync(
         Stream file,
         string fileName)

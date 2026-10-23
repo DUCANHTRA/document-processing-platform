@@ -105,6 +105,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddHostedService<DocumentProcessingWorker>();
 builder.Services.AddScoped<IFileProcessor, PdfFileProcessor>();
 
+// Add HTTP Logging
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields =
+        Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestMethod |
+        Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.RequestPath |
+        Microsoft.AspNetCore.HttpLogging.HttpLoggingFields.ResponseStatusCode;
+});
+
 // Build the app after all services are registered.
 var app = builder.Build();
 
@@ -124,16 +133,39 @@ if (!app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapHub<ProcessingHub>("/hubs/processing");
+app.UseHttpLogging();
 
 app.MapControllers();
 
-app.MapGet("/api/health", () =>
+app.MapGet("/api/health/database", async (AppDbContext db) =>
 {
-    //Return HTTP 200 OK response
-    return Results.Ok(new
+    var canConnect = await db.Database.CanConnectAsync();
+
+    return Results.Json(
+        new
+        {
+            database = canConnect ? "reachable" : "unavailable"
+        },
+        statusCode: canConnect
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status503ServiceUnavailable);
+});
+
+app.MapGet("/api/health/storage", async (
+    IFileStorage storage,
+    CancellationToken cancellationToken) =>
+{
+    try
     {
-        status = "healthy"
-    });
+        await storage.CheckHealthAsync(cancellationToken);
+        return Results.Ok(new { storage = "reachable" });
+    }
+    catch (HttpRequestException)
+    {
+        return Results.Json(
+            new { storage = "unavailable" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
 });
 
 //Run the app

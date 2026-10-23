@@ -2,6 +2,17 @@ namespace DocumentProcessing.Api.Services;
 
 public class LocalFileStorage : IFileStorage
 {
+    public Task CheckHealthAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var directory = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "uploads");
+
+        Directory.CreateDirectory(directory);
+        return Task.CompletedTask;
+    }
     public async Task<string> SaveAsync(
         Stream file,
         string fileName
