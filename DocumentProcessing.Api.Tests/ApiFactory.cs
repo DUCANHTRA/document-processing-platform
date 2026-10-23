@@ -11,8 +11,12 @@ namespace DocumentProcessing.Api.Tests;
 
 public class ApiFactory : WebApplicationFactory<Program>
 {
-    public ApiFactory()
+    private readonly bool _storageHealthFails;
+
+    public ApiFactory(bool storageHealthFails = false)
     {
+        _storageHealthFails = storageHealthFails;
+
         // 1. Use the TEST database
         Environment.SetEnvironmentVariable(
             "ConnectionStrings__DefaultConnection",
@@ -33,7 +37,14 @@ public class ApiFactory : WebApplicationFactory<Program>
         {
             // 2. Use fake storage, so no real files are written
             services.RemoveAll<IFileStorage>();
-            services.AddScoped<IFileStorage, FakeFileStorage>();
+            if (_storageHealthFails)
+            {
+                services.AddScoped<IFileStorage, FailingFileStorage>();
+            }
+            else
+            {
+                services.AddScoped<IFileStorage, FakeFileStorage>();
+            }
 
             // 3. Switch off the background worker
             var worker = services.SingleOrDefault(service =>

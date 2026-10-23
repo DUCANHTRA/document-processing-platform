@@ -13,6 +13,11 @@ public class RecordingFileStorage : IFileStorage
         _content = content;
     }
 
+    public Task CheckHealthAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
     public Task<string> SaveAsync(Stream file, string fileName)
     {
         return Task.FromResult("recorded-" + fileName);
