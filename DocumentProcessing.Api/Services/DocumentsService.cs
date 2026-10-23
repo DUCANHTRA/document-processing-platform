@@ -57,7 +57,7 @@ public class DocumentsService
                 document.UserId == userId);
     }
 
-    public async Task<Document> CreateDocument(IFormFile file, int userId)
+    public async Task<Document> CreateDocument(IFormFile file, int userId, string correlationId)
     {
         var storagePath = await _fileStorage.SaveAsync(
             file.OpenReadStream(),
@@ -87,17 +87,19 @@ public class DocumentsService
         {
             DocumentId = document.Id,
             Status = "Pending",
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            CorrelationId = correlationId
         };
 
         _context.ProcessingJobs.Add(job);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation(
-            "Created document {DocumentId} and procesing job {JobId} for user {UserId}",
+            "Created document {DocumentId} and procesing job {JobId} for user {UserId} with correlation ID {CorrelationId}",
             document.Id,
             job.Id,
-            userId
+            userId,
+            correlationId
         );
 
         return document;

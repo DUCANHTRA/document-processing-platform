@@ -134,8 +134,10 @@ public class DocumentsController : ControllerBase
         {
             return Unauthorized();
         }
+
+        var correlationId = HttpContext.TraceIdentifier;
         // Pass the validated request data to the service and wait for the new document to be saved.
-        var document = await _documentService.CreateDocument(file, userId);
+        var document = await _documentService.CreateDocument(file, userId, correlationId);
     
         // Return HTTP 201 Created, include the new document in the response body,
         // and set the Location header to the URL for retrieving it with GetDocument.

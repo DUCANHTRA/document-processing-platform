@@ -149,8 +149,9 @@ public class DocumentProcessingWorker : BackgroundService
         try
         {
             logger.LogInformation(
-                "Started processing job {JobId}",
-                job.Id);
+                "Started processing job {JobId} with correlation ID {CorrelationId}",
+                job.Id,
+                job.CorrelationId);
 
             var document = await context.Documents
             .FirstAsync(
