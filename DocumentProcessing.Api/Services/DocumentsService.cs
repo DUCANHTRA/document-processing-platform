@@ -11,11 +11,13 @@ public class DocumentsService
     //Service depends on IFileStorage interface to save files
     private readonly IFileStorage _fileStorage;
     private readonly AppDbContext _context;
+    private readonly ILogger<DocumentsService> _logger;
 
-    public DocumentsService(IFileStorage fileStorage, AppDbContext context)
+    public DocumentsService(IFileStorage fileStorage, AppDbContext context, ILogger<DocumentsService> logger)
     {
         _fileStorage = fileStorage;
         _context = context;
+        _logger = logger;
     }
     public async Task<object[]> GetDocuments()
     {
@@ -90,6 +92,13 @@ public class DocumentsService
 
         _context.ProcessingJobs.Add(job);
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation(
+            "Created document {DocumentId} and procesing job {JobId} for user {UserId}",
+            document.Id,
+            job.Id,
+            userId
+        );
 
         return document;
     }

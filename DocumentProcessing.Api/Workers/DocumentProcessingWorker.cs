@@ -11,20 +11,24 @@ public class DocumentProcessingWorker : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IHubContext<ProcessingHub> _hubContext;
+    private readonly ILogger<DocumentProcessingWorker> _logger;
 
     private static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(5);
 
     public DocumentProcessingWorker(
         IServiceScopeFactory scopeFactory,
-        IHubContext<ProcessingHub> hubContext)
+        IHubContext<ProcessingHub> hubContext,
+        ILogger<DocumentProcessingWorker> logger)
     {
         _scopeFactory = scopeFactory;
         _hubContext = hubContext;
+        _logger = logger;
     }
 
     public static async Task RecoverExpiredJobAsync(
         AppDbContext context,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        ILogger<DocumentProcessingWorker> logger
     )
     {
         var now = DateTime.UtcNow;
@@ -60,8 +64,10 @@ public class DocumentProcessingWorker : BackgroundService
 
         if (requeued > 0 || failed > 0)
             {
-                Console.WriteLine(
-                    $"Recovered expired jobs. Requeued: {requeued}, failed: {failed}");
+                logger.LogInformation(
+                    "Recovered expired jobs. Requeued {RequeuedCount}, failed {FailedCount}",
+                    requeued,
+                    failed);
             }
     }
 
@@ -134,14 +140,17 @@ public class DocumentProcessingWorker : BackgroundService
     IFileStorage fileStorage,
     IFileProcessor fileProcessor,
     ProcessingJob job,
-    CancellationToken stoppingToken)
+    CancellationToken stoppingToken,
+    ILogger<DocumentProcessingWorker> logger)
     {
         var jobId = job.Id;
         var leaseToken = job.LeaseToken!.Value;
 
         try
         {
-            Console.WriteLine($"Started processing job {job.Id}");
+            logger.LogInformation(
+                "Started processing job {JobId}",
+                job.Id);
 
             var document = await context.Documents
             .FirstAsync(
@@ -156,7 +165,10 @@ public class DocumentProcessingWorker : BackgroundService
             var text = await fileProcessor.ProcessAsync(
                 file, stoppingToken);
             
-            Console.WriteLine($"Extracted text from {document.FileName}:");
+            logger.LogInformation(
+                "Extracted text from document {DocumentId} ({FileName})",
+                document.Id,
+                document.FileName);
 
             var result = await context.ProcessingResults
                 .FirstOrDefaultAsync(
@@ -201,14 +213,17 @@ public class DocumentProcessingWorker : BackgroundService
             {
                 await completeTx.RollbackAsync(stoppingToken);
 
-                Console.WriteLine(
-                    $"Job {jobId} lost its lease. Result discarded.");
+                logger.LogWarning(
+                    "Job {JobId} lost its lease. Result discarded",
+                    jobId);
             }
             else
             {
                 await completeTx.CommitAsync(stoppingToken);
 
-                Console.WriteLine($"Completed job {jobId}");
+                logger.LogInformation(
+                    "Completed job {JobId}",
+                    jobId);
             }
         }
         catch (OperationCanceledException)
@@ -227,8 +242,9 @@ public class DocumentProcessingWorker : BackgroundService
 
             if (failedJob is null)
             {
-                Console.WriteLine(
-                    $"Job {jobId} failed but lost its lease. Ignoring.");
+                logger.LogWarning(
+                    "Job {JobId} failed but lost its lease. Ignoring",
+                    jobId);
             }
             else
             {
@@ -239,16 +255,21 @@ public class DocumentProcessingWorker : BackgroundService
 
                 if (failedJob.Status == "Pending")
                 {
-                    Console.WriteLine(
-                        $"Job {failedJob.Id} failed. " +
-                        $"Retry {failedJob.RetryCount} of {failedJob.MaxRetryCount}. " +
-                        $"Will retry at {failedJob.NextRetryAt}.");
+                    logger.LogWarning(
+                        ex,
+                        "Job {JobId} failed. Retry {RetryCount} of {MaxRetryCount}; next retry at {NextRetryAt}",
+                        failedJob.Id,
+                        failedJob.RetryCount,
+                        failedJob.MaxRetryCount,
+                        failedJob.NextRetryAt);
                 }
                 else
                 {
-                    Console.WriteLine(
-                        $"Job {failedJob.Id} permanently failed after " +
-                        $"{failedJob.RetryCount} attempts: {ex.Message}");
+                    logger.LogError(
+                        ex,
+                        "Job {JobId} permanently failed after {RetryCount} attempts",
+                        failedJob.Id,
+                        failedJob.RetryCount);
                 }
 
                 await context.SaveChangesAsync(stoppingToken);
@@ -316,7 +337,7 @@ public class DocumentProcessingWorker : BackgroundService
                     .GetRequiredService<IFileStorage>();
 
             //Recover expired jobs
-            await RecoverExpiredJobAsync(context, stoppingToken);
+            await RecoverExpiredJobAsync(context, stoppingToken, _logger);
 
             //Claim Pending Job
             var job = await ClaimNextJobAsync(
@@ -336,7 +357,8 @@ public class DocumentProcessingWorker : BackgroundService
                     fileStorage,
                     fileProcessor,
                     job,
-                    stoppingToken);
+                    stoppingToken,
+                    _logger);
                 
                 await NotifyJobStatusAsync(
                     context,
