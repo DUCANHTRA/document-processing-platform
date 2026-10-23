@@ -137,6 +137,7 @@ app.UseHttpLogging();
 
 app.MapControllers();
 
+// Database health check endpoint
 app.MapGet("/api/health/database", async (AppDbContext db) =>
 {
     var canConnect = await db.Database.CanConnectAsync();
@@ -151,6 +152,7 @@ app.MapGet("/api/health/database", async (AppDbContext db) =>
             : StatusCodes.Status503ServiceUnavailable);
 });
 
+// Storage health check endpoint
 app.MapGet("/api/health/storage", async (
     IFileStorage storage,
     CancellationToken cancellationToken) =>
@@ -166,6 +168,40 @@ app.MapGet("/api/health/storage", async (
             new { storage = "unavailable" },
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
+});
+
+// Diagnostic endpoint
+app.MapGet("/api/health/diagnostics", async (
+    AppDbContext db,
+    IFileStorage storage,
+    CancellationToken cancellationToken) =>
+{
+    var databaseReachable =
+        await db.Database.CanConnectAsync(cancellationToken);
+
+    var storageReachable = true;
+
+    try
+    {
+        await storage.CheckHealthAsync(cancellationToken);
+    }
+    catch (HttpRequestException)
+    {
+        storageReachable = false;
+    }
+
+    var allHealthy = databaseReachable && storageReachable;
+
+    return Results.Json(
+        new
+        {
+            status = allHealthy ? "healthy" : "unhealthy",
+            database = databaseReachable ? "reachable" : "unavailable",
+            storage = storageReachable ? "reachable" : "unavailable"
+        },
+        statusCode: allHealthy
+            ? StatusCodes.Status200OK
+            : StatusCodes.Status503ServiceUnavailable);
 });
 
 //Run the app
