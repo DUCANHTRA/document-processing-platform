@@ -122,6 +122,18 @@ builder.Services.AddHttpLogging(options =>
 // Build the app after all services are registered.
 var app = builder.Build();
 
+//
+var migrateOnStartup =
+    builder.Configuration.GetValue<bool?>("Database:MigrateOnStartup") ?? true;
+
+if (migrateOnStartup)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+    await db.Database.MigrateAsync();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

@@ -17,6 +17,7 @@ services:
     environment:
       ASPNETCORE_HTTP_PORTS: 8080
       Worker__Enabled: "false"
+      Database__MigrateOnStartup: "true"
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       Supabase__Url: ${SUPABASE_URL}
       Supabase__Bucket: ${SUPABASE_BUCKET}
@@ -48,6 +49,7 @@ services:
     environment:
       ASPNETCORE_HTTP_PORTS: 8080
       Worker__Enabled: "true"
+      Database__MigrateOnStartup: "false"
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       Supabase__Url: ${SUPABASE_URL}
       Supabase__Bucket: ${SUPABASE_BUCKET}
