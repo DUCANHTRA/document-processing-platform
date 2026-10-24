@@ -35,3 +35,4 @@ artifacts/
 Thumbs.db
 
 /uploads/
+.env

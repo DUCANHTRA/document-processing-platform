@@ -102,7 +102,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // This is the important step:
 // We register the background worker here.
 // ASP.NET Core will start it when the application starts.
-builder.Services.AddHostedService<DocumentProcessingWorker>();
+var workerEnabled = builder.Configuration.GetValue<bool?>("Worker:Enabled") ?? true;
+
+if (workerEnabled)
+{
+    builder.Services.AddHostedService<DocumentProcessingWorker>();
+}
 builder.Services.AddScoped<IFileProcessor, PdfFileProcessor>();
 
 // Add HTTP Logging

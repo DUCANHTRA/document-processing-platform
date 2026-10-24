@@ -1,13 +1,40 @@
 services:
+
+  client:
+    build:
+      context: ../client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: document-processing-api:local
+    environment:
+      ASPNETCORE_HTTP_PORTS: 8080
+      Worker__Enabled: "false"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      Supabase__Url: ${SUPABASE_URL}
+      Supabase__Bucket: ${SUPABASE_BUCKET}
+      Supabase__SecretKey: ${SUPABASE_SECRET_KEY}
+      Jwt__Secret: ${JWT_SECRET}
+    ports:
+      - "5116:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:17-alpine
     container_name: document-processing-db
     environment:
-      POSTGRES_DB: document_processing
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: local_dev_password
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +42,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  worker:
+    image: document-processing-api:local
+    environment:
+      ASPNETCORE_HTTP_PORTS: 8080
+      Worker__Enabled: "true"
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      Supabase__Url: ${SUPABASE_URL}
+      Supabase__Bucket: ${SUPABASE_BUCKET}
+      Supabase__SecretKey: ${SUPABASE_SECRET_KEY}
+      Jwt__Secret: ${JWT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
