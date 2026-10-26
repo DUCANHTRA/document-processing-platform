@@ -1,17 +1,30 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  uploadDocument
-} from "@/api/documents";
+import { uploadDocument } from "@/api/documents";
+import { useAuth } from "@/context/AuthContext";
 
 function UploadPage() {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { isAuthenticated, openAuthModal } = useAuth();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  function handleSelectClick() {
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+    fileInputRef.current?.click();
+  }
+
   async function handleUpload() {
+    if (!isAuthenticated) {
+      openAuthModal("login");
+      return;
+    }
+
     if (!selectedFile) {
       setUploadError("Please select a PDF first.");
       return;
@@ -22,14 +35,10 @@ function UploadPage() {
 
     try {
       await uploadDocument(selectedFile);
-
       setSelectedFile(null);
-
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-
-      // We'll add the new document's status lookup here next.
     } catch (error) {
       setUploadError(
         error instanceof Error
@@ -64,7 +73,7 @@ function UploadPage() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => fileInputRef.current?.click()}
+          onClick={handleSelectClick}
           disabled={isUploading}
         >
           Select PDF
@@ -73,7 +82,7 @@ function UploadPage() {
         <Button
           type="button"
           onClick={handleUpload}
-          disabled={!selectedFile || isUploading}
+          disabled={isAuthenticated && (!selectedFile || isUploading)}
         >
           {isUploading ? "Uploading..." : "Upload PDF"}
         </Button>
@@ -86,9 +95,7 @@ function UploadPage() {
       )}
 
       {uploadError && (
-        <p className="mt-2 text-sm text-red-600">
-          {uploadError}
-        </p>
+        <p className="mt-2 text-sm text-red-600">{uploadError}</p>
       )}
     </section>
   );

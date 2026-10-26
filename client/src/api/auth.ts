@@ -26,6 +26,24 @@ export function getToken(): string | null {
 }
 
 
+export async function register(email: string, password: string): Promise<void> {
+  const response = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+  });
+
+  if (response.status === 409) {
+    throw new Error("An account with this email already exists.");
+  }
+
+  if (!response.ok) {
+    throw new Error("Registration failed.");
+  }
+}
+
 // Read saved token from sessionStorage and adds to request header Authorization - Bearer
 export async function authenticatedFetch(
   input: RequestInfo | URL,

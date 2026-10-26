@@ -1,9 +1,13 @@
-import { NavLink, Routes, Route } from "react-router";
+import { NavLink, Routes, Route, Navigate } from "react-router";
 import UploadPage from "@/pages/UploadPage";
 import DocumentsPage from "@/pages/DocumentsPage";
-import LoginPage from "@/pages/LoginPage";
+import AuthModal from "@/components/AuthModal";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 
 function App() {
+  const { isAuthenticated, userEmail, logout, openAuthModal } = useAuth();
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
@@ -37,21 +41,48 @@ function App() {
 
       {/* Main area */}
       <div className="ml-60">
-        <header className="flex h-16 items-center border-b bg-white px-8">
-          <h2 className="text-lg font-semibold">
-            Document Dashboard
-          </h2>
+        <header className="flex h-16 items-center justify-between border-b bg-white px-8">
+          <h2 className="text-lg font-semibold">Document Dashboard</h2>
+
+          {/* Auth controls */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-slate-500">{userEmail}</span>
+              <Button variant="outline" size="sm" onClick={logout}>
+                Log out
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => openAuthModal("login")}
+              >
+                Log in
+              </Button>
+              <Button size="sm" onClick={() => openAuthModal("signup")}>
+                Sign up
+              </Button>
+            </div>
+          )}
         </header>
 
         <main className="p-8">
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
-            <Route path="*" element={<UploadPage />} />
+            {/* Redirect /login to /upload (login is now a modal) */}
+            <Route path="/login" element={<Navigate to="/upload" replace />} />
+            {/* Default and catch-all → /upload */}
+            <Route path="/" element={<Navigate to="/upload" replace />} />
+            <Route path="*" element={<Navigate to="/upload" replace />} />
           </Routes>
         </main>
       </div>
+
+      {/* Global auth modal — mounted once here */}
+      <AuthModal />
     </div>
   );
 }
