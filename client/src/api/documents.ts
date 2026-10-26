@@ -3,6 +3,7 @@ import { authenticatedFetch } from "@/api/auth";
 export interface Document {
   id: number;
   fileName: string;
+  contentType: string;
 }
 
 export interface ProcessingStatus {
@@ -10,6 +11,12 @@ export interface ProcessingStatus {
   jobId: number;
   status: string;
   errorMessage: string | null;
+}
+
+export interface ProcessingResult {
+  documentId: number;
+  extractedText: string;
+  createdAt: string;
 }
 
 export async function getDocuments(): Promise<Document[]> {
@@ -51,6 +58,26 @@ export async function getDocumentStatus(documentId: number): Promise<ProcessingS
 
     if (!response.ok) {
       throw new Error(`Failed to fetch document status (${response.status})`);
+    }
+
+    return response.json();
+}
+
+export async function getDocument(documentId: number): Promise<Document> {
+    const response = await authenticatedFetch(`/api/documents/${documentId}`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch document (${response.status})`);
+    }
+
+    return response.json();
+}
+
+export async function getProcessingResult(documentId: number): Promise<ProcessingResult> {
+    const response = await authenticatedFetch(`/api/documents/${documentId}/result`);
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch processing result (${response.status})`);
     }
 
     return response.json();

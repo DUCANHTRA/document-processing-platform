@@ -8,6 +8,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router";
 import type { Document, ProcessingStatus } from "@/api/documents";
 
 interface DocumentTableProps {
@@ -39,12 +41,14 @@ function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
             <TableHead>Document</TableHead>
             <TableHead>ID</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead></TableHead>
           </TableRow>
         </TableHeader>
 
         <TableBody>
           {documents.map((document) => {
             const status = documentStatuses[document.id]?.status;
+            const isCompleted = status?.toLowerCase() === "completed";
             const label =
               documentStatuses[document.id] === undefined
                 ? "Loading..."
@@ -61,6 +65,13 @@ function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
                     {label}
                   </Badge>
                 </TableCell>
+              <TableCell>
+                {isCompleted && (
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to={`/documents/${document.id}`}>View</Link>
+                  </Button>
+                )}
+              </TableCell>
               </TableRow>
             );
           })}

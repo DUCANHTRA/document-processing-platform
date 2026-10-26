@@ -1,6 +1,7 @@
 import { NavLink, Routes, Route, Navigate } from "react-router";
 import UploadPage from "@/pages/UploadPage";
 import DocumentsPage from "@/pages/DocumentsPage";
+import DocumentDetailPage from "@/pages/DocumentDetailPage";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ function App() {
           <Routes>
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
+            <Route path="/documents/:id" element={<DocumentDetailPage />} />
             {/* Redirect /login to /upload (login is now a modal) */}
             <Route path="/login" element={<Navigate to="/upload" replace />} />
             {/* Default and catch-all → /upload */}
