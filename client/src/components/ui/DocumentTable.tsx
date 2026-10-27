@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Link } from "react-router";
 import type { Document, ProcessingStatus } from "@/api/documents";
 
@@ -67,9 +67,12 @@ function DocumentTable({ documents, documentStatuses }: DocumentTableProps) {
                 </TableCell>
               <TableCell>
                 {isCompleted && (
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to={`/documents/${document.id}`}>View</Link>
-                  </Button>
+                  <Link
+                    to={`/documents/${document.id}`}
+                    className={buttonVariants({ variant: "ghost", size: "sm" })}
+                  >
+                    View
+                  </Link>
                 )}
               </TableCell>
               </TableRow>

@@ -16,7 +16,7 @@ services:
     image: document-processing-api:local
     environment:
       ASPNETCORE_HTTP_PORTS: 8080
-      Worker__Enabled: "false"
+      Worker__Enabled: "true"
       Database__MigrateOnStartup: "true"
       ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
       Supabase__Url: ${SUPABASE_URL}
@@ -52,22 +52,6 @@ services:
       timeout: 5s
       retries: 10
 
-  worker:
-    image: document-processing-api:local
-    environment:
-      ASPNETCORE_HTTP_PORTS: 8080
-      Worker__Enabled: "true"
-      Database__MigrateOnStartup: "false"
-      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
-      Supabase__Url: ${SUPABASE_URL}
-      Supabase__Bucket: ${SUPABASE_BUCKET}
-      Supabase__SecretKey: ${SUPABASE_SECRET_KEY}
-      Jwt__Secret: ${JWT_SECRET}
-    depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_healthy
 
 volumes:
   postgres_data:
