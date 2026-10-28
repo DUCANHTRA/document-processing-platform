@@ -4,21 +4,51 @@ interface LoginResponse {
 
 const tokenKey = "document-processing-token";
 
-export async function login(email: string, password: string): Promise<void> {
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
+const MAX_RETRIES = 10;
+const RETRY_INTERVAL_MS = 5000;
+const RETRIABLE_STATUSES = [502, 503, 504];
 
-  if (!response.ok) {
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function login(
+  email: string,
+  password: string,
+  onRetry?: (attempt: number, total: number) => void
+): Promise<void> {
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (response.ok) {
+      const data: LoginResponse = await response.json();
+      sessionStorage.setItem(tokenKey, data.token);
+      return;
+    }
+
+    // Retriable gateway errors — server is cold-starting
+    if (RETRIABLE_STATUSES.includes(response.status)) {
+      if (attempt < MAX_RETRIES) {
+        onRetry?.(attempt, MAX_RETRIES);
+        await delay(RETRY_INTERVAL_MS);
+        continue;
+      }
+      // All retries exhausted
+      throw new Error("Could not reach the server. Please try again later.");
+    }
+
+    // Hard failures — do not retry
+    if (response.status === 401) {
+      throw new Error("Email or password is incorrect.");
+    }
     throw new Error("Email or password is incorrect.");
   }
-
-  const data: LoginResponse = await response.json();
-  sessionStorage.setItem(tokenKey, data.token);
 }
 
 export function getToken(): string | null {

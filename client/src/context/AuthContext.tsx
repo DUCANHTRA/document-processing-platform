@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -25,7 +26,11 @@ interface AuthContextValue {
   userEmail: string | null;
   modalOpen: boolean;
   modalTab: "login" | "signup";
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string,
+    onRetry?: (attempt: number, total: number) => void
+  ) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => void;
   openAuthModal: (tab: "login" | "signup") => void;
@@ -48,8 +53,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<"login" | "signup">("login");
 
-  async function login(email: string, password: string): Promise<void> {
-    await apiLogin(email, password);
+  // Warm-up ping — fires on mount to start waking the backend before the user submits the form
+  useEffect(() => {
+    fetch("/api/health", { method: "GET" }).catch(() => {});
+  }, []);
+
+  async function login(
+    email: string,
+    password: string,
+    onRetry?: (attempt: number, total: number) => void
+  ): Promise<void> {
+    await apiLogin(email, password, onRetry);
     setIsAuthenticated(true);
     setUserEmail(email);
   }

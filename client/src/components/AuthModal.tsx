@@ -47,7 +47,9 @@ function AuthModal() {
     setLoginError(null);
     setIsLoggingIn(true);
     try {
-      await login(loginEmail, loginPassword);
+      await login(loginEmail, loginPassword, (_attempt, _total) => {
+        setLoginError("Server is waking up, please wait\u2026");
+      });
       closeAuthModal();
       resetForms();
       navigate("/documents");
@@ -152,7 +154,9 @@ function AuthModal() {
               </label>
 
               {loginError && (
-                <p className="text-sm text-red-600">{loginError}</p>
+                <p className={`text-sm ${loginError.includes("waking up") ? "text-amber-600" : "text-red-600"}`}>
+                  {loginError}
+                </p>
               )}
 
               <div className="flex items-center justify-between gap-3 pt-1">
