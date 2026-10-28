@@ -13,7 +13,7 @@ function App() {
     <div className="min-h-screen bg-slate-50">
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 w-60 border-r bg-white p-6">
-        <h1 className="text-xl font-bold">DocuFlow</h1>
+        <h1 className="text-xl font-bold">PDF Extractor</h1>
 
         <nav className="mt-8 space-y-2">
           <NavLink
