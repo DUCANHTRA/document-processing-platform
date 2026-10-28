@@ -221,6 +221,9 @@ app.MapGet("/api/health/diagnostics", async (
             : StatusCodes.Status503ServiceUnavailable);
 });
 
+// Health endpoints
+app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
+
 //Run the app
 app.Run();
 

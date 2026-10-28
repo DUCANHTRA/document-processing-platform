@@ -5,9 +5,19 @@ import DocumentDetailPage from "@/pages/DocumentDetailPage";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { wakeServer } from "@/api/health";
 
 function App() {
   const { isAuthenticated, userEmail, logout, openAuthModal } = useAuth();
+  const [waking, setWaking] = useState(true);
+
+  useEffect(() => {
+  wakeServer()
+    .then(() => setWaking(false)); // when finish waking up server, change state to false
+  }, []);
+
+  console.log("waking:", waking);
 
   return (
     <div className="min-h-screen bg-slate-50">
