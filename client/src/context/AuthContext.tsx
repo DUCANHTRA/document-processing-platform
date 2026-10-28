@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Warm-up ping — fires on mount to start waking the backend before the user submits the form
   useEffect(() => {
-    fetch("/api/health", { method: "GET" }).catch(() => {});
+    fetch("/api/health/diagnostics", { method: "GET" }).catch(() => {});
   }, []);
 
   async function login(
