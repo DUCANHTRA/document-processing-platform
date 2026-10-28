@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { Dialog } from "@base-ui/react/dialog";
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/ui/PasswordInput";
+import { PasswordStrength, isPasswordStrong } from "@/components/ui/PasswordStrength";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "cn";
 
@@ -141,9 +143,7 @@ function AuthModal() {
 
               <label className="block text-sm font-medium">
                 Password
-                <input
-                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  type="password"
+                <PasswordInput
                   autoComplete="current-password"
                   required
                   value={loginPassword}
@@ -194,27 +194,27 @@ function AuthModal() {
 
               <label className="block text-sm font-medium">
                 Password
-                <input
-                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  type="password"
+                <PasswordInput
                   autoComplete="new-password"
                   required
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
                 />
               </label>
+              <PasswordStrength password={signupPassword} />
 
               <label className="block text-sm font-medium">
                 Confirm password
-                <input
-                  className="mt-1 w-full rounded-md border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
-                  type="password"
+                <PasswordInput
                   autoComplete="new-password"
                   required
                   value={signupConfirm}
                   onChange={(e) => setSignupConfirm(e.target.value)}
                 />
               </label>
+              {signupConfirm.length > 0 && signupPassword !== signupConfirm && (
+                <p className="text-sm text-red-600">Passwords do not match.</p>
+              )}
 
               {signupError && (
                 <p className="text-sm text-red-600">{signupError}</p>
@@ -228,7 +228,14 @@ function AuthModal() {
                     </Button>
                   }
                 />
-                <Button type="submit" disabled={isSigningUp}>
+                <Button
+                  type="submit"
+                  disabled={
+                    isSigningUp ||
+                    !isPasswordStrong(signupPassword) ||
+                    signupPassword !== signupConfirm
+                  }
+                >
                   {isSigningUp ? "Creating account..." : "Sign up"}
                 </Button>
               </div>
