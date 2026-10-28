@@ -33,7 +33,7 @@ export async function uploadDocument(file: File): Promise<Document> {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await authenticatedFetch("api/documents", {
+    const response = await authenticatedFetch("/api/documents", {
         method: "POST",
         body: formData,
     });
